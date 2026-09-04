@@ -1,0 +1,96 @@
+<div class="landing-container">
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="badge-pill">
+      <span class="badge-dot"></span>
+      <span>Arquitectura Cloud Native • Microsoft Entra ID (Azure AD)</span>
+    </div>
+
+    <h1 class="hero-title">
+      CloudStock <span class="gradient-text">Pro</span>
+    </h1>
+
+    <p class="hero-description">
+      Sistema intuitivo de gestión y control de inventario para locales comerciales y puntos de venta (POS).
+      Administra referencias, disponibilidad de stock, alertas y categorías en tiempo real con una interfaz moderna, ágil y agradable para el cliente.
+    </p>
+
+    <!-- Call To Action -->
+    <div class="hero-actions">
+      <button (click)="onLogin()" class="btn-primary-cta" id="btn-login-hero">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
+          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+          <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>
+        </svg>
+        <span>Iniciar Sesión con Microsoft Entra ID</span>
+      </button>
+
+      <a *ngIf="authService.isAuthenticated$ | async" routerLink="/inventory" class="btn-secondary-cta">
+        <span>Ir al Panel de Inventario →</span>
+      </a>
+    </div>
+
+    <div class="tenant-tag">
+      <span>Tenant Institucional: <code>73d72038-30bf-4ab9-85bc-a402de679470</code></span>
+    </div>
+  </section>
+
+  <!-- Architecture Highlights Grid (Alineado con la Rúbrica de Evaluación) -->
+  <section class="features-grid">
+    <div class="feature-card">
+      <div class="card-icon icon-blue">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
+        </svg>
+      </div>
+      <h3>Seguridad IDaaS (Azure AD)</h3>
+      <p>
+        Flujo de autorización OAuth2 / OIDC con MSAL Browser v3. <code>MsalGuard</code> protege las rutas de Angular y <code>MsalInterceptor</code> inyecta automáticamente el Bearer Token en cada solicitud al API Gateway.
+      </p>
+      <div class="card-footer-tags">
+        <span class="tag">MSAL v3</span>
+        <span class="tag">MsalGuard</span>
+        <span class="tag">Bearer JWT</span>
+      </div>
+    </div>
+
+    <div class="feature-card">
+      <div class="card-icon icon-emerald">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="20" height="14" x="2" y="5" rx="2"/>
+          <line x1="2" x2="22" y1="10" y2="10"/>
+        </svg>
+      </div>
+      <h3>Resource Server en Spring Boot</h3>
+      <p>
+        BFF / Backend desacoplado desplegado en instancias AWS EC2. Valida criptográficamente la firma digital del token con los endpoints JWKS de Microsoft, verificando emisor (issuer) y audiencia (audience).
+      </p>
+      <div class="card-footer-tags">
+        <span class="tag">Spring Boot 3</span>
+        <span class="tag">JWKS Validator</span>
+        <span class="tag">Stateless</span>
+      </div>
+    </div>
+
+    <div class="feature-card">
+      <div class="card-icon icon-amber">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+      </div>
+      <h3>Control de Acceso por Roles (RBAC)</h3>
+      <p>
+        Mapeo del claim <code>roles</code> en Spring Security. El rol <strong>'Admin'</strong> autoriza la creación, modificación y eliminación (POST/PUT/DELETE), mientras que usuarios estándar cuentan con acceso de solo lectura (códigos 401 y 403 RFC-7807).
+      </p>
+      <div class="card-footer-tags">
+        <span class="tag">Role Admin</span>
+        <span class="tag">HTTP 403</span>
+        <span class="tag">RFC-7807</span>
+      </div>
+    </div>
+  </section>
+</div>

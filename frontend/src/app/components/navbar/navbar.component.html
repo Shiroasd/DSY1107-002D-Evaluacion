@@ -1,0 +1,78 @@
+<header class="navbar-container">
+  <div class="navbar-wrapper">
+    <!-- Brand Logo & Title -->
+    <a routerLink="/" class="brand-section" style="text-decoration: none;">
+      <div class="brand-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m7.5 4.27 9 5.15"/>
+          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+          <path d="m3.3 7 8.7 5 8.7-5"/>
+          <path d="M12 22V12"/>
+        </svg>
+      </div>
+      <div class="brand-info">
+        <span class="brand-name">CloudStock Pro</span>
+        <span class="brand-tag">Gestión de Inventario Comercial</span>
+      </div>
+    </a>
+
+    <!-- Navigation Links -->
+    <nav class="nav-links" *ngIf="authService.isAuthenticated$ | async">
+      <a routerLink="/inventory" routerLinkActive="active" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="7" height="7" x="3" y="3" rx="1"/>
+          <rect width="7" height="7" x="14" y="3" rx="1"/>
+          <rect width="7" height="7" x="14" y="14" rx="1"/>
+          <rect width="7" height="7" x="3" y="14" rx="1"/>
+        </svg>
+        <span>Inventario</span>
+      </a>
+      <a routerLink="/categories" routerLinkActive="active" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/>
+        </svg>
+        <span>Categorías</span>
+      </a>
+    </nav>
+
+    <!-- User Section & Auth Controls -->
+    <div class="auth-section">
+      <ng-container *ngIf="authService.currentUser$ | async as user; else loginButton">
+        <!-- User Profile Badge -->
+        <div class="user-badge">
+          <div class="avatar">
+            {{ user.name.charAt(0).toUpperCase() }}
+          </div>
+          <div class="user-details">
+            <span class="user-name">{{ user.name }}</span>
+            <div class="role-pill" [class.admin-pill]="user.isAdmin" [class.user-pill]="!user.isAdmin">
+              <span class="dot"></span>
+              {{ user.isAdmin ? 'Administrador' : 'Vendedor / Lector' }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Logout Button -->
+        <button (click)="onLogout()" class="btn-logout" title="Cerrar sesión de Microsoft Entra ID">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" x2="9" y1="12" y2="12"/>
+          </svg>
+          <span>Salir</span>
+        </button>
+      </ng-container>
+
+      <ng-template #loginButton>
+        <button (click)="onLogin()" class="btn-login" id="btn-navbar-login">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+            <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>
+          </svg>
+          <span>Iniciar Sesión (Azure AD)</span>
+        </button>
+      </ng-template>
+    </div>
+  </div>
+</header>

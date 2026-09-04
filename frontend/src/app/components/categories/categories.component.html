@@ -1,0 +1,89 @@
+<div class="categories-view-container">
+  <div class="header-section">
+    <div>
+      <h2 class="page-title">Categorías de Inventario</h2>
+      <p class="page-subtitle">Organización de rubros comerciales y departamentos de venta</p>
+    </div>
+  </div>
+
+  <div class="content-grid">
+    <!-- Formulario de Nueva Categoría -->
+    <div class="form-card">
+      <div class="card-title-group">
+        <div class="icon-folder">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/>
+          </svg>
+        </div>
+        <h3 class="card-title">Nueva Categoría</h3>
+      </div>
+      <p class="role-warning">
+        <span class="warning-badge">Requiere Rol Admin</span>
+        Esta operación emitirá una petición POST validada por Microsoft Entra ID.
+      </p>
+
+      <form [formGroup]="categoryForm" (ngSubmit)="onSubmit()" class="category-form">
+        <div class="form-group">
+          <label for="cat-name" class="form-label">Nombre de Categoría *</label>
+          <input
+            id="cat-name"
+            type="text"
+            formControlName="name"
+            class="form-control"
+            placeholder="Ej: Accesorios POS y Consumibles"
+            [class.is-invalid]="categoryForm.get('name')?.invalid && categoryForm.get('name')?.touched"
+          />
+          <span class="error-text" *ngIf="categoryForm.get('name')?.invalid && categoryForm.get('name')?.touched">
+            El nombre es obligatorio (2 a 100 caracteres).
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label for="cat-desc" class="form-label">Descripción</label>
+          <textarea
+            id="cat-desc"
+            formControlName="description"
+            class="form-control textarea-control"
+            rows="3"
+            placeholder="Descripción opcional del rubro comercial..."
+          ></textarea>
+        </div>
+
+        <button
+          type="submit"
+          class="btn-submit"
+          [disabled]="categoryForm.invalid || isCreating"
+        >
+          <span *ngIf="!isCreating">Guardar Categoría</span>
+          <span *ngIf="isCreating">Procesando...</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Lista de Categorías Existentes -->
+    <div class="list-card">
+      <div class="card-title-group">
+        <h3 class="card-title">Categorías Registradas ({{ categories.length }})</h3>
+      </div>
+
+      <div *ngIf="isLoading" class="loading-state">
+        <div class="spinner"></div>
+        <span>Cargando categorías...</span>
+      </div>
+
+      <div *ngIf="!isLoading" class="categories-list">
+        <div *ngFor="let cat of categories" class="category-item">
+          <div class="item-header">
+            <span class="category-id-badge">ID #{{ cat.id }}</span>
+            <h4 class="category-name">{{ cat.name }}</h4>
+          </div>
+          <p class="category-desc">{{ cat.description || 'Sin descripción detallada.' }}</p>
+        </div>
+
+        <div *ngIf="categories.length === 0" class="empty-state">
+          <p>No se encontraron categorías registradas.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

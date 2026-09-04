@@ -1,0 +1,122 @@
+<div class="modal-backdrop" (click)="onCancel()">
+  <div class="modal-dialog" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m7.5 4.27 9 5.15"/>
+          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+          <path d="m3.3 7 8.7 5 8.7-5"/>
+          <path d="M12 22V12"/>
+        </svg>
+      </div>
+      <div>
+        <h3 class="modal-title">{{ product ? 'Editar Producto' : 'Nuevo Producto Comercial' }}</h3>
+        <p class="modal-subtitle">Los cambios impactan el inventario central del Resource Server</p>
+      </div>
+      <button class="btn-close" (click)="onCancel()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18"/>
+          <path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="modal-body">
+      <!-- SKU & Categoría en Grid -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="sku" class="form-label">Código SKU *</label>
+          <input
+            id="sku"
+            type="text"
+            formControlName="sku"
+            class="form-control"
+            placeholder="Ej: POS-1005"
+            [class.is-invalid]="form.get('sku')?.invalid && form.get('sku')?.touched"
+          />
+          <span class="error-text" *ngIf="form.get('sku')?.invalid && form.get('sku')?.touched">
+            El SKU es obligatorio (mínimo 3 caracteres).
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label for="categoryId" class="form-label">Categoría Comercial *</label>
+          <select
+            id="categoryId"
+            formControlName="categoryId"
+            class="form-control select-control"
+            [class.is-invalid]="form.get('categoryId')?.invalid && form.get('categoryId')?.touched"
+          >
+            <option value="" disabled>Seleccione una categoría</option>
+            <option *ngFor="let cat of categories" [value]="cat.id">
+              {{ cat.name }}
+            </option>
+          </select>
+          <span class="error-text" *ngIf="form.get('categoryId')?.invalid && form.get('categoryId')?.touched">
+            Seleccione una categoría válida.
+          </span>
+        </div>
+      </div>
+
+      <!-- Nombre del Producto -->
+      <div class="form-group">
+        <label for="name" class="form-label">Nombre o Descripción Comercial *</label>
+        <input
+          id="name"
+          type="text"
+          formControlName="name"
+          class="form-control"
+          placeholder="Ej: Terminal Táctil POS 15.6 pulgadas"
+          [class.is-invalid]="form.get('name')?.invalid && form.get('name')?.touched"
+        />
+        <span class="error-text" *ngIf="form.get('name')?.invalid && form.get('name')?.touched">
+          El nombre del producto es obligatorio (entre 2 y 150 caracteres).
+        </span>
+      </div>
+
+      <!-- Precio y Stock en Grid -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="price" class="form-label">Precio Unitario ($ USD) *</label>
+          <div class="input-addon-wrapper">
+            <span class="addon">$</span>
+            <input
+              id="price"
+              type="number"
+              step="0.01"
+              formControlName="price"
+              class="form-control with-addon"
+              placeholder="0.00"
+              [class.is-invalid]="form.get('price')?.invalid && form.get('price')?.touched"
+            />
+          </div>
+          <span class="error-text" *ngIf="form.get('price')?.invalid && form.get('price')?.touched">
+            El precio debe ser mayor a 0.
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label for="stock" class="form-label">Unidades en Stock *</label>
+          <input
+            id="stock"
+            type="number"
+            formControlName="stock"
+            class="form-control"
+            placeholder="0"
+            [class.is-invalid]="form.get('stock')?.invalid && form.get('stock')?.touched"
+          />
+          <span class="error-text" *ngIf="form.get('stock')?.invalid && form.get('stock')?.touched">
+            El stock debe ser un entero positivo o cero.
+          </span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" (click)="onCancel()">Cancelar</button>
+        <button type="submit" class="btn-primary" [disabled]="form.invalid">
+          {{ product ? 'Guardar Cambios' : 'Registrar Producto' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

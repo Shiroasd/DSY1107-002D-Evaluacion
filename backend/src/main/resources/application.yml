@@ -1,0 +1,57 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: inventory-backend
+
+  # Configuración exacta de Microsoft Entra ID (Azure Active Directory)
+  cloud:
+    azure:
+      active-directory:
+        enabled: true
+        profile:
+          tenant-id: 73d72038-30bf-4ab9-85bc-a402de679470
+        credential:
+          client-id: afcd0a4e-f3f3-4934-9861-4d8d13cecc30
+        app-id-uri: api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30
+
+  # Configuración de Persistencia con H2 Database
+  datasource:
+    url: jdbc:h2:mem:inventorydb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:data.sql
+
+# Logging para auditoría de seguridad y endpoints
+logging:
+  level:
+    root: INFO
+    org.springframework.security: INFO
+    org.springframework.security.oauth2: DEBUG
+    com.azure.spring.cloud.autoconfigure.implementation.aad: INFO
+    com.retail.inventory: DEBUG
