@@ -73,6 +73,13 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- PostgreSQL Driver for Cloud Database (AWS RDS) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- Project Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

@@ -76,6 +76,7 @@ public class ProductServiceImpl implements ProductService {
         Product product = Product.builder()
                 .sku(cleanSku)
                 .name(requestDto.getName().trim())
+                .description(requestDto.getDescription() != null && !requestDto.getDescription().isBlank() ? requestDto.getDescription().trim() : null)
                 .price(requestDto.getPrice())
                 .stock(requestDto.getStock())
                 .category(category)
@@ -101,6 +102,7 @@ public class ProductServiceImpl implements ProductService {
 
         product.setSku(cleanSku);
         product.setName(requestDto.getName().trim());
+        product.setDescription(requestDto.getDescription() != null && !requestDto.getDescription().isBlank() ? requestDto.getDescription().trim() : null);
         product.setPrice(requestDto.getPrice());
         product.setStock(requestDto.getStock());
         product.setCategory(category);
@@ -123,6 +125,7 @@ public class ProductServiceImpl implements ProductService {
                 .id(product.getId())
                 .sku(product.getSku())
                 .name(product.getName())
+                .description(product.getDescription())
                 .price(product.getPrice())
                 .stock(product.getStock())
                 .categoryId(product.getCategory().getId())

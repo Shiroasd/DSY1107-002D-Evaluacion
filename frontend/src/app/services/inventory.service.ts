@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { Observable, Subject, catchError, throwError } from 'rxjs';
+import { Observable, Subject, catchError, retry, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Product, ProductRequest } from '../models/product.model';
 import { Category, CategoryRequest } from '../models/category.model';
@@ -34,12 +34,14 @@ export class InventoryService {
     }
 
     return this.http.get<Product[]>(`${this.baseUrl}/products`, { params }).pipe(
+      retry({ count: 1, delay: 300 }),
       catchError(err => this.handleHttpError(err))
     );
   }
 
   public getProductById(id: number): Observable<Product> {
     return this.http.get<Product>(`${this.baseUrl}/products/${id}`).pipe(
+      retry({ count: 1, delay: 300 }),
       catchError(err => this.handleHttpError(err))
     );
   }
@@ -66,6 +68,7 @@ export class InventoryService {
 
   public getCategories(): Observable<Category[]> {
     return this.http.get<Category[]>(`${this.baseUrl}/categories`).pipe(
+      retry({ count: 1, delay: 300 }),
       catchError(err => this.handleHttpError(err))
     );
   }

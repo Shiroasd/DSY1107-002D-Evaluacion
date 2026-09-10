@@ -46,9 +46,16 @@ public class AzureJwtGrantedAuthoritiesConverter implements Converter<Jwt, Colle
         }
 
         // Si el usuario autenticado mediante Microsoft Entra ID no tiene App Roles asignados explícitamente en el tenant,
-        // se le asigna ROLE_Admin para que el creador y dueño del sistema pueda operar el inventario completamente.
+        // se le asigna ROLE_USER para garantizar el principio de mínimo privilegio y validar códigos 403 Forbidden.
+        // Opcionalmente se puede habilitar ROLE_Admin por defecto mediante la variable DEFAULT_ADMIN_ROLE=true.
         if (!hasExplicitRoles) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_Admin"));
+            boolean defaultAdmin = Boolean.parseBoolean(System.getProperty("app.security.default-admin", 
+                    System.getenv().getOrDefault("DEFAULT_ADMIN_ROLE", "false")));
+            if (defaultAdmin) {
+                authorities.add(new SimpleGrantedAuthority("ROLE_Admin"));
+            } else {
+                authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+            }
         }
 
         // 2. Mapeo de scopes delegados (claim "scp" o "scope")

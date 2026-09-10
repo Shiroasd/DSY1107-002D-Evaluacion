@@ -26,6 +26,9 @@ public class ProductRequestDto {
     @Size(min = 2, max = 150, message = "El nombre debe tener entre 2 y 150 caracteres")
     private String name;
 
+    @Size(max = 500, message = "La descripción no puede superar los 500 caracteres")
+    private String description;
+
     @NotNull(message = "El precio es obligatorio")
     @DecimalMin(value = "0.01", message = "El precio debe ser mayor a cero")
     private BigDecimal price;

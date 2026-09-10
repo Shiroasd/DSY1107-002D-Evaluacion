@@ -2,6 +2,7 @@ export interface Product {
   id: number;
   sku: string;
   name: string;
+  description?: string;
   price: number;
   stock: number;
   categoryId: number;
@@ -11,6 +12,7 @@ export interface Product {
 export interface ProductRequest {
   sku: string;
   name: string;
+  description?: string;
   price: number;
   stock: number;
   categoryId: number;

@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${PORT:8080}
   servlet:
     context-path: /
 
@@ -13,29 +13,28 @@ spring:
       active-directory:
         enabled: true
         profile:
-          tenant-id: 73d72038-30bf-4ab9-85bc-a402de679470
+          tenant-id: ${AZURE_TENANT_ID:73d72038-30bf-4ab9-85bc-a402de679470}
         credential:
-          client-id: afcd0a4e-f3f3-4934-9861-4d8d13cecc30
-        app-id-uri: api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30
+          client-id: ${AZURE_CLIENT_ID:afcd0a4e-f3f3-4934-9861-4d8d13cecc30}
+        app-id-uri: ${AZURE_APP_ID_URI:api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30}
 
-  # Configuración de Persistencia con H2 Database
+  # Configuración de Persistencia (H2 para desarrollo/test local, AWS RDS / PostgreSQL para Cloud)
   datasource:
-    url: jdbc:h2:mem:inventorydb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:inventorydb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.h2.Driver}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
 
   h2:
     console:
-      enabled: true
+      enabled: ${H2_CONSOLE_ENABLED:true}
       path: /h2-console
       settings:
         web-allow-others: true
 
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:create-drop}
     show-sql: false
     defer-datasource-initialization: true
     properties:
@@ -44,8 +43,9 @@ spring:
 
   sql:
     init:
-      mode: always
+      mode: ${SPRING_SQL_INIT_MODE:always}
       data-locations: classpath:data.sql
+      encoding: UTF-8
 
 # Logging para auditoría de seguridad y endpoints
 logging:

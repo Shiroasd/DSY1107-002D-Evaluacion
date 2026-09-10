@@ -95,33 +95,52 @@ public class SecurityConfig {
 
     @Bean
     public JwtDecoder jwtDecoder() {
-        String jwkSetUri = "https://login.microsoftonline.com/73d72038-30bf-4ab9-85bc-a402de679470/discovery/v2.0/keys";
+        // Endpoint JWKS unificado de Microsoft para resolución de llaves públicas de firma
+        String jwkSetUri = "https://login.microsoftonline.com/common/discovery/v2.0/keys";
         NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
 
-        OAuth2TokenValidator<Jwt> defaultValidator = JwtValidators.createDefaultWithIssuer(
-            "https://login.microsoftonline.com/73d72038-30bf-4ab9-85bc-a402de679470/v2.0"
-        );
-        OAuth2TokenValidator<Jwt> audienceValidator = token -> {
-            List<String> audiences = token.getAudience();
-            if (audiences != null && (
-                audiences.contains("afcd0a4e-f3f3-4934-9861-4d8d13cecc30") ||
-                audiences.contains("api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30") ||
-                audiences.contains("57c1db2d-484b-463a-b993-45c3ef349e3c")
-            )) {
-                return OAuth2TokenValidatorResult.success();
+        // 1. Validador de vigencia de tiempo (exp y nbf)
+        OAuth2TokenValidator<Jwt> timestampValidator = new org.springframework.security.oauth2.jwt.JwtTimestampValidator();
+
+        // 2. Validador de Emisor (acepta formato v2.0 y v1.0 de Microsoft Entra ID para el tenant)
+        OAuth2TokenValidator<Jwt> issuerValidator = token -> {
+            if (token.getIssuer() != null) {
+                String iss = token.getIssuer().toString();
+                if (iss.contains("73d72038-30bf-4ab9-85bc-a402de679470") ||
+                    iss.startsWith("https://login.microsoftonline.com/") ||
+                    iss.startsWith("https://sts.windows.net/")) {
+                    return OAuth2TokenValidatorResult.success();
+                }
             }
-            return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Audience no válida", null));
+            return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Emisor (iss) no reconocido: " + token.getIssuer(), null));
         };
 
-        jwtDecoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(defaultValidator, audienceValidator));
+        // 3. Validador de Audiencia (Backend App ID, Frontend App ID o App ID URI)
+        OAuth2TokenValidator<Jwt> audienceValidator = token -> {
+            List<String> audiences = token.getAudience();
+            if (audiences != null && !audiences.isEmpty()) {
+                for (String aud : audiences) {
+                    if (aud.contains("afcd0a4e-f3f3-4934-9861-4d8d13cecc30") ||
+                        aud.contains("57c1db2d-484b-463a-b993-45c3ef349e3c") ||
+                        aud.contains("00000003-0000-0000-c000-000000000000") ||
+                        aud.contains("graph.microsoft.com")) {
+                        return OAuth2TokenValidatorResult.success();
+                    }
+                }
+            }
+            return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Audiencia (aud) no válida: " + audiences, null));
+        };
+
+        jwtDecoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(timestampValidator, issuerValidator, audienceValidator));
         return jwtDecoder;
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Orígenes permitidos (Angular dev server y variantes locales)
+        // Orígenes permitidos (Localhost, AWS API Gateway, S3, CloudFront y dominios de nube)
         configuration.setAllowedOriginPatterns(List.of(
+            "*",
             "http://localhost:4200",
             "http://127.0.0.1:4200",
             "https://localhost:4200"

@@ -1,0 +1,37 @@
+# Perfil de Despliegue en AWS (EC2 + AWS RDS PostgreSQL + AWS API Gateway)
+# Activar ejecutando: java -jar inventory-backend-1.0.0.jar --spring.profiles.active=aws
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/inventorydb}
+    driver-class-name: org.postgresql.Driver
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    defer-datasource-initialization: true
+
+  sql:
+    init:
+      mode: never
+
+  h2:
+    console:
+      enabled: false
+
+logging:
+  level:
+    root: INFO
+    org.springframework.security: INFO
+    com.retail.inventory: INFO

@@ -32,11 +32,18 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
 
+        String authHeader = request.getHeader("Authorization");
+        String detailReason = (authHeader == null || authHeader.isBlank())
+                ? "Token JWT ausente en la cabecera Authorization."
+                : authException.getMessage();
+
+        System.err.println("[SECURITY 401] URI: " + request.getRequestURI() + " | AuthHeader presente: " + (authHeader != null) + " | Razón: " + detailReason);
+
         ErrorResponseDto errorDto = ErrorResponseDto.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.UNAUTHORIZED.value())
                 .error("Unauthorized")
-                .message("Acceso no autorizado: Token JWT ausente, expirado o con firma digital inválida. Inicie sesión en Microsoft Entra ID.")
+                .message("Acceso no autorizado: " + detailReason)
                 .path(request.getRequestURI())
                 .build();
 

@@ -1,7 +1,10 @@
 # Sistema de Gestión de Inventario para Locales Comerciales (Cloud Native)
-### Arquitectura SPA + Resource Server protegida por Microsoft Entra ID (Azure AD)
+### Arquitectura SPA + Resource Server protegida por Microsoft Entra ID (Azure AD) y AWS API Gateway
+**Asignatura**: Desarrollo Cloud Native I (DSY1107) • **Evaluación Parcial N° 1**
 
 Solución empresarial desacoplada y nativa de nube para el control y administración de inventario, terminales de punto de venta (POS) y suministros para locales comerciales.
+
+> 📖 **Guía de Despliegue en la Nube de AWS**: Para instrucciones de despliegue en instancias EC2, AWS RDS PostgreSQL y AWS API Gateway, consulta [AWS_DEPLOYMENT_GUIDE.md](file:///c:/Users/gtoro/Desktop/Cloud%20Native%201/AWS_DEPLOYMENT_GUIDE.md).
 
 ---
 

@@ -10,8 +10,8 @@
         </svg>
       </div>
       <div>
-        <h3 class="modal-title">{{ product ? 'Editar Producto' : 'Nuevo Producto Comercial' }}</h3>
-        <p class="modal-subtitle">Los cambios impactan el inventario central del Resource Server</p>
+        <h3 class="modal-title">{{ product ? 'Editar Producto Comercial' : 'Nuevo Producto Comercial' }}</h3>
+        <p class="modal-subtitle">Gestión centralizada de referencias y disponibilidad para el punto de venta</p>
       </div>
       <button class="btn-close" (click)="onCancel()">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -22,10 +22,10 @@
     </div>
 
     <form [formGroup]="form" (ngSubmit)="onSubmit()" class="modal-body">
-      <!-- SKU & Categoría en Grid -->
+      <!-- Fila 1: Codigo/ID & Categoria en Grid -->
       <div class="form-row">
         <div class="form-group">
-          <label for="sku" class="form-label">Código SKU *</label>
+          <label for="sku" class="form-label">Codigo de Producto / ID *</label>
           <input
             id="sku"
             type="text"
@@ -35,7 +35,7 @@
             [class.is-invalid]="form.get('sku')?.invalid && form.get('sku')?.touched"
           />
           <span class="error-text" *ngIf="form.get('sku')?.invalid && form.get('sku')?.touched">
-            El SKU es obligatorio (mínimo 3 caracteres).
+            El codigo o ID es obligatorio (minimo 3 caracteres).
           </span>
         </div>
 
@@ -58,15 +58,15 @@
         </div>
       </div>
 
-      <!-- Nombre del Producto -->
+      <!-- Fila 2: Nombre del Producto -->
       <div class="form-group">
-        <label for="name" class="form-label">Nombre o Descripción Comercial *</label>
+        <label for="name" class="form-label">Nombre del Producto *</label>
         <input
           id="name"
           type="text"
           formControlName="name"
           class="form-control"
-          placeholder="Ej: Terminal Táctil POS 15.6 pulgadas"
+          placeholder="Ej: Terminal Táctil All-in-One 15.6 pulgadas"
           [class.is-invalid]="form.get('name')?.invalid && form.get('name')?.touched"
         />
         <span class="error-text" *ngIf="form.get('name')?.invalid && form.get('name')?.touched">
@@ -74,24 +74,40 @@
         </span>
       </div>
 
-      <!-- Precio y Stock en Grid -->
+      <!-- Fila 3: Descripción Comercial -->
+      <div class="form-group">
+        <label for="description" class="form-label">Descripción Comercial / Especificaciones</label>
+        <textarea
+          id="description"
+          rows="3"
+          formControlName="description"
+          class="form-control"
+          placeholder="Ej: Pantalla capacitiva True-Flat, procesador Quad-Core, 8GB RAM, SSD 128GB, base de soporte metálica resistente..."
+          [class.is-invalid]="form.get('description')?.invalid && form.get('description')?.touched"
+        ></textarea>
+        <span class="error-text" *ngIf="form.get('description')?.invalid && form.get('description')?.touched">
+          La descripción no puede exceder 500 caracteres.
+        </span>
+      </div>
+
+      <!-- Fila 4: Precio y Stock en Grid -->
       <div class="form-row">
         <div class="form-group">
-          <label for="price" class="form-label">Precio Unitario ($ USD) *</label>
+          <label for="price" class="form-label">Precio Unitario ($ CLP) *</label>
           <div class="input-addon-wrapper">
             <span class="addon">$</span>
             <input
               id="price"
               type="number"
-              step="0.01"
+              step="1"
               formControlName="price"
               class="form-control with-addon"
-              placeholder="0.00"
+              placeholder="Ej: 450000"
               [class.is-invalid]="form.get('price')?.invalid && form.get('price')?.touched"
             />
           </div>
           <span class="error-text" *ngIf="form.get('price')?.invalid && form.get('price')?.touched">
-            El precio debe ser mayor a 0.
+            El precio debe ser mayor a 0 CLP.
           </span>
         </div>
 

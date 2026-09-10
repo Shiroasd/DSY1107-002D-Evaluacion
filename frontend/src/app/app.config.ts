@@ -1,6 +1,10 @@
-import { ApplicationConfig, APP_INITIALIZER, Injectable, inject } from '@angular/core';
+import { ApplicationConfig, APP_INITIALIZER, Injectable, inject, LOCALE_ID } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { registerLocaleData } from '@angular/common';
+import localeEsCl from '@angular/common/locales/es-CL';
 import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi, HttpRequest, HttpHandler, HttpEvent, HttpInterceptor } from '@angular/common/http';
+
+registerLocaleData(localeEsCl, 'es-CL');
 import {
   IPublicClientApplication,
   PublicClientApplication,
@@ -68,9 +72,7 @@ import { AuthService } from './services/auth.service';
 export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
   return {
     interactionType: InteractionType.Redirect,
-    protectedResourceMap: new Map([
-      ['http://localhost:8080/api/v1', ['openid', 'profile', 'email']]
-    ])
+    protectedResourceMap: new Map()
   };
 }
 
@@ -83,14 +85,18 @@ export class TokenHeaderInterceptor implements HttpInterceptor {
   private authService = inject(AuthService);
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    if (req.url.includes('localhost:8080/api/v1')) {
+    const isApiRequest = req.url.includes('/api/v1') || req.url.startsWith(environment.apiConfig.baseUrl);
+    if (isApiRequest) {
       const token = this.authService.getStoredToken();
       if (token && !req.headers.has('Authorization')) {
+        console.info('[TokenHeaderInterceptor] Adjuntando Bearer Token a:', req.url);
         req = req.clone({
           setHeaders: {
             Authorization: `Bearer ${token}`
           }
         });
+      } else if (!token) {
+        console.warn('[TokenHeaderInterceptor] Advertencia: Token no encontrado en almacenamiento para:', req.url);
       }
     }
     return next.handle(req);
@@ -122,6 +128,7 @@ export function MSALInitializerFactory(msalService: MsalService, authService: Au
             msalService.instance.setActiveAccount(accounts[0]);
           }
         }
+        authService.updateUserState();
       }),
       catchError((err) => {
         console.warn('[MSALInitializer] Nota en procesamiento de redirección:', err);
@@ -165,6 +172,10 @@ export const appConfig: ApplicationConfig = {
     },
     MsalService,
     MsalGuard,
-    MsalBroadcastService
+    MsalBroadcastService,
+    {
+      provide: LOCALE_ID,
+      useValue: 'es-CL'
+    }
   ]
 };

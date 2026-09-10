@@ -31,6 +31,10 @@ export class ProductModalComponent implements OnInit {
         this.product ? this.product.name : '',
         [Validators.required, Validators.minLength(2), Validators.maxLength(150)]
       ],
+      description: [
+        this.product?.description ? this.product.description : '',
+        [Validators.maxLength(500)]
+      ],
       price: [
         this.product ? this.product.price : null,
         [Validators.required, Validators.min(0.01)]
@@ -56,6 +60,7 @@ export class ProductModalComponent implements OnInit {
     const request: ProductRequest = {
       sku: val.sku.trim(),
       name: val.name.trim(),
+      description: val.description && val.description.trim() ? val.description.trim() : undefined,
       price: Number(val.price),
       stock: Number(val.stock),
       categoryId: Number(val.categoryId)
