@@ -82,8 +82,8 @@ import { AuthService } from './services/auth.service';
 
 export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
   const protectedResourceMap = new Map<string, Array<string>>();
-  protectedResourceMap.set('http://32.192.168.114:8080/api/v1/*', environment.apiConfig.protectedResourceScopes);
-  protectedResourceMap.set('http://localhost:8080/api/v1/*', environment.apiConfig.protectedResourceScopes);
+  protectedResourceMap.set('http://32.192.168.114:8081/api/v1/*', environment.apiConfig.protectedResourceScopes);
+  protectedResourceMap.set('http://localhost:8081/api/v1/*', environment.apiConfig.protectedResourceScopes);
 
   return {
     interactionType: InteractionType.Popup,
@@ -106,6 +106,7 @@ export class MsalInterceptor implements HttpInterceptor {
     const isApiRequest = req.url.includes('/api/v1') ||
                          req.url.startsWith(environment.apiConfig.baseUrl) ||
                          req.url.includes('32.192.168.114') ||
+                         req.url.includes('localhost:8081') ||
                          req.url.includes('localhost:8080');
     if (!isApiRequest) {
       return next.handle(req);
