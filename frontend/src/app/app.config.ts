@@ -61,7 +61,12 @@ export function MSALGuardConfigFactory(): MsalGuardConfiguration {
   return {
     interactionType: InteractionType.Redirect,
     authRequest: {
-      scopes: ['openid', 'profile', 'email']
+      scopes: [
+        'openid',
+        'profile',
+        'email',
+        environment.apiConfig.scope
+      ]
     },
     loginFailedRoute: '/'
   };
@@ -70,9 +75,14 @@ export function MSALGuardConfigFactory(): MsalGuardConfiguration {
 import { AuthService } from './services/auth.service';
 
 export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
+  const protectedResourceMap = new Map<string, Array<string>>();
+  // Mapeo explícito de la IP del backend en AWS con los scopes protegidos de Azure
+  protectedResourceMap.set('https://32.192.168.114/*', environment.apiConfig.protectedResourceScopes);
+  protectedResourceMap.set('https://32.192.168.114/api/v1/*', environment.apiConfig.protectedResourceScopes);
+
   return {
     interactionType: InteractionType.Redirect,
-    protectedResourceMap: environment.apiConfig.protectedResourceMap
+    protectedResourceMap: environment.apiConfig.protectedResourceMap || protectedResourceMap
   };
 }
 
@@ -144,12 +154,12 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptorsFromDi()),
     {
       provide: HTTP_INTERCEPTORS,
-      useClass: TokenHeaderInterceptor,
+      useClass: MsalInterceptor,
       multi: true
     },
     {
       provide: HTTP_INTERCEPTORS,
-      useClass: MsalInterceptor,
+      useClass: TokenHeaderInterceptor,
       multi: true
     },
     {

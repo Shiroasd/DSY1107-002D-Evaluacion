@@ -17,16 +17,9 @@ public class CorsConfig implements WebMvcConfigurer {
         registry.addMapping("/**")
                 .allowedOrigins(
                         "https://32.193.45.223",
-                        "http://localhost:4200",
-                        "http://127.0.0.1:4200",
-                        "https://localhost:4200"
+                        "https://32.193.45.223/"
                 )
-                .allowedOriginPatterns(
-                        "https://32.193.45.223*",
-                        "http://localhost:*",
-                        "http://127.0.0.1:*"
-                )
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders(
                         "Authorization",
                         "Content-Type",
@@ -36,7 +29,7 @@ public class CorsConfig implements WebMvcConfigurer {
                         "Access-Control-Request-Method",
                         "Access-Control-Request-Headers"
                 )
-                .exposedHeaders("Authorization", "Location", "Content-Disposition")
+                .exposedHeaders("Authorization", "Location")
                 .allowCredentials(true)
                 .maxAge(3600);
     }

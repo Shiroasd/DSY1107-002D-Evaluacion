@@ -177,7 +177,12 @@ export class AuthService {
     }
 
     const authRequest = {
-      scopes: ['openid', 'profile', 'email'],
+      scopes: [
+        'openid',
+        'profile',
+        'email',
+        environment.apiConfig.scope
+      ],
       prompt: 'select_account'
     };
 

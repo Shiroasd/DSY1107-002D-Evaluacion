@@ -157,26 +157,18 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // Orígenes permitidos requeridos explícitamente
+        // Configura Access-Control-Allow-Origin para permitir exclusivamente las peticiones desde el frontend: https://32.193.45.223/
         configuration.setAllowedOrigins(Arrays.asList(
             "https://32.193.45.223",
-            "http://localhost:4200",
-            "http://127.0.0.1:4200",
-            "https://localhost:4200"
+            "https://32.193.45.223/"
         ));
         
-        configuration.setAllowedOriginPatterns(Arrays.asList(
-            "https://32.193.45.223*",
-            "http://localhost:*",
-            "http://127.0.0.1:*"
-        ));
-        
-        // Métodos HTTP requeridos
+        // En Access-Control-Allow-Methods, habilita los verbos HTTP necesarios (GET, POST, PUT, DELETE) y obligatoriamente OPTIONS para Preflight
         configuration.setAllowedMethods(Arrays.asList(
-            "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"
+            "GET", "POST", "PUT", "DELETE", "OPTIONS"
         ));
         
-        // Encabezados HTTP requeridos (Content-Type y Authorization)
+        // En Access-Control-Allow-Headers, permite de forma explícita los encabezados Content-Type y Authorization
         configuration.setAllowedHeaders(Arrays.asList(
             "Authorization",
             "Content-Type",
@@ -187,7 +179,7 @@ public class SecurityConfig {
             "Access-Control-Request-Headers"
         ));
         
-        configuration.setExposedHeaders(Arrays.asList("Authorization", "Location", "Content-Disposition"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Location"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
