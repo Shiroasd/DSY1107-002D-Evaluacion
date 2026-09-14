@@ -35,14 +35,16 @@ export class AppComponent implements OnInit {
           }
         }
         this.authService.updateUserState();
-        if (this.authService.getActiveAccount() && (window.location.pathname === '/' || window.location.pathname === '')) {
+        const path = window.location.pathname;
+        if (this.authService.getActiveAccount() && (path === '/' || path === '' || path === '/index.html')) {
           this.router.navigate(['/inventory']);
         }
       },
       error: (err) => {
         console.warn('[AppComponent] handleRedirectObservable completado:', err);
         this.authService.updateUserState();
-        if (this.authService.getActiveAccount() && (window.location.pathname === '/' || window.location.pathname === '')) {
+        const path = window.location.pathname;
+        if (this.authService.getActiveAccount() && (path === '/' || path === '' || path === '/index.html')) {
           this.router.navigate(['/inventory']);
         }
       }
@@ -50,7 +52,8 @@ export class AppComponent implements OnInit {
 
     // Verificación inmediata al arranque
     this.authService.updateUserState();
-    if (this.authService.getActiveAccount() && (window.location.pathname === '/' || window.location.pathname === '')) {
+    const path = window.location.pathname;
+    if (this.authService.getActiveAccount() && (path === '/' || path === '' || path === '/index.html')) {
       this.router.navigate(['/inventory']);
     }
   }

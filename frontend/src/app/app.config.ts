@@ -61,12 +61,7 @@ export function MSALGuardConfigFactory(): MsalGuardConfiguration {
   return {
     interactionType: InteractionType.Redirect,
     authRequest: {
-      scopes: [
-        'openid',
-        'profile',
-        'email',
-        environment.apiConfig.scope
-      ]
+      scopes: ['openid', 'profile', 'email']
     },
     loginFailedRoute: '/'
   };
@@ -120,11 +115,14 @@ export class TokenHeaderInterceptor implements HttpInterceptor {
  */
 export function MSALInitializerFactory(msalService: MsalService, authService: AuthService) {
   return () => {
-    const currentHash = typeof window !== 'undefined' ? window.location.hash : '';
+    const responseString = typeof window !== 'undefined'
+      ? (window.location.hash || window.location.search || undefined)
+      : undefined;
     return msalService.initialize().pipe(
-      concatMap(() => msalService.handleRedirectObservable(currentHash || undefined)),
+      concatMap(() => msalService.handleRedirectObservable(responseString)),
       tap((result) => {
         if (result) {
+          console.info('[MSALInitializer] Autenticación completada exitosamente:', result.account?.username);
           const token = result.idToken || result.accessToken;
           if (token) {
             authService.setToken(token);
@@ -141,7 +139,7 @@ export function MSALInitializerFactory(msalService: MsalService, authService: Au
         authService.updateUserState();
       }),
       catchError((err) => {
-        console.warn('[MSALInitializer] Nota en procesamiento de redirección:', err);
+        console.error('[MSALInitializer] Error o nota en procesamiento de redirección:', err);
         return of(null);
       })
     );

@@ -35,7 +35,7 @@ export class AuthService {
         this.updateUserState();
       });
 
-    // Escuchar eventos de autenticación
+    // Escuchar eventos de autenticación exitosa
     this.msalBroadcastService.msalSubject$
       .pipe(
         filter((msg: EventMessage) =>
@@ -60,6 +60,18 @@ export class AuthService {
           }
         }
         this.updateUserState();
+      });
+
+    // Escuchar posibles fallos de autenticación para diagnóstico
+    this.msalBroadcastService.msalSubject$
+      .pipe(
+        filter((msg: EventMessage) =>
+          msg.eventType === EventType.LOGIN_FAILURE ||
+          msg.eventType === EventType.ACQUIRE_TOKEN_FAILURE
+        )
+      )
+      .subscribe((msg: EventMessage) => {
+        console.error('[AuthService] Error MSAL recibido:', msg.eventType, msg.error);
       });
 
     // Inicializar estado inmediato con cuentas en caché local
@@ -165,24 +177,21 @@ export class AuthService {
    *    para garantizar compatibilidad total con cuentas institucionales / académicas.
    */
   public login(): void {
-    // 1. Limpiar posibles bloqueos residuales de interacción en sessionStorage
+    // 1. Limpiar posibles bloqueos residuales de interacción en sessionStorage y localStorage
     try {
-      Object.keys(sessionStorage).forEach(key => {
-        if (key.startsWith('msal.') && (key.includes('interaction') || key.includes('request'))) {
-          sessionStorage.removeItem(key);
-        }
+      [sessionStorage, localStorage].forEach(storage => {
+        Object.keys(storage).forEach(key => {
+          if (key.startsWith('msal.') && (key.includes('interaction') || key.includes('request'))) {
+            storage.removeItem(key);
+          }
+        });
       });
     } catch (e) {
       console.warn('[AuthService] Limpieza de sesión preventiva:', e);
     }
 
     const authRequest = {
-      scopes: [
-        'openid',
-        'profile',
-        'email',
-        environment.apiConfig.scope
-      ],
+      scopes: ['openid', 'profile', 'email'],
       prompt: 'select_account'
     };
 
@@ -310,7 +319,15 @@ export class AuthService {
 
   public getActiveAccount() {
     try {
-      return this.msalService.instance.getActiveAccount();
+      let active = this.msalService.instance.getActiveAccount();
+      if (!active) {
+        const accounts = this.msalService.instance.getAllAccounts();
+        if (accounts && accounts.length > 0) {
+          active = accounts[0];
+          this.msalService.instance.setActiveAccount(active);
+        }
+      }
+      return active;
     } catch {
       return null;
     }
