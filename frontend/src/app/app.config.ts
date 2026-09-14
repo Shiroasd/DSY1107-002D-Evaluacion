@@ -82,7 +82,7 @@ import { AuthService } from './services/auth.service';
 
 export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
   const protectedResourceMap = new Map<string, Array<string>>();
-  protectedResourceMap.set('http://32.192.168.114:8080/*', environment.apiConfig.protectedResourceScopes);
+  protectedResourceMap.set('http://32.192.168.114:8080/api/v1/*', environment.apiConfig.protectedResourceScopes);
   protectedResourceMap.set('http://localhost:8080/api/v1/*', environment.apiConfig.protectedResourceScopes);
 
   return {

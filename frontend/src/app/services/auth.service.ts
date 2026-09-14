@@ -294,12 +294,12 @@ export class AuthService {
       for (const storage of storages) {
         for (let i = 0; i < storage.length; i++) {
           const key = storage.key(i);
-          if (key && (key.toLowerCase().includes('idtoken') || key.toLowerCase().includes('accesstoken'))) {
+          if (key && (key.toLowerCase().includes('idtoken') || key.toLowerCase().includes('accesstoken') || key.toLowerCase().includes('credential') || key.toLowerCase().includes('token'))) {
             const val = storage.getItem(key);
-            if (val && val.includes('secret')) {
+            if (val) {
               try {
                 const parsed = JSON.parse(val);
-                const secret = parsed.secret;
+                const secret = parsed.secret || parsed.token || parsed.idToken || parsed.credential || (typeof parsed === 'string' ? parsed : null);
                 if (secret && typeof secret === 'string' && secret.startsWith('ey')) {
                   if (this.isTokenValid(secret)) {
                     const payload = this.parseJwt(secret);
