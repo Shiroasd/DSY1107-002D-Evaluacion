@@ -272,6 +272,16 @@ export class AuthService {
       }
     } catch {}
 
+    // 2.5 Verificar si la cuenta activa en memoria tiene idToken directo
+    try {
+      const activeAccount = this.getActiveAccount();
+      if (activeAccount && (activeAccount as any).idToken && this.isTokenValid((activeAccount as any).idToken)) {
+        const idToken = (activeAccount as any).idToken;
+        this.setToken(idToken);
+        return idToken;
+      }
+    } catch {}
+
     // 3. Buscar el token válido más reciente en el almacenamiento de MSAL (preferencia a ID tokens)
     try {
       let bestToken: string | null = null;

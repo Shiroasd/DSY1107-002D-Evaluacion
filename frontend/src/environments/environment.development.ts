@@ -14,9 +14,7 @@ export const environment = {
       'api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30/user_impersonation'
     ],
     protectedResourceMap: new Map<string, Array<string>>([
-      ['https://32.192.168.114/api/v1/*', ['api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30/user_impersonation']],
       ['https://32.192.168.114/*', ['api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30/user_impersonation']],
-      ['https://32.192.168.114/', ['api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30/user_impersonation']],
       ['http://localhost:8080/api/v1/*', ['api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30/user_impersonation']]
     ])
   }

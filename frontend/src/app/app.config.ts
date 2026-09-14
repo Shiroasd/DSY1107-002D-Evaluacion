@@ -71,9 +71,8 @@ import { AuthService } from './services/auth.service';
 
 export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
   const protectedResourceMap = new Map<string, Array<string>>();
-  // Mapeo explícito de la IP del backend en AWS con los scopes protegidos de Azure
+  // Mapeo explícito único de la IP del backend en AWS con los scopes protegidos de Azure
   protectedResourceMap.set('https://32.192.168.114/*', environment.apiConfig.protectedResourceScopes);
-  protectedResourceMap.set('https://32.192.168.114/api/v1/*', environment.apiConfig.protectedResourceScopes);
 
   return {
     interactionType: InteractionType.Popup,
@@ -84,10 +83,9 @@ export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
 /**
  * Interceptor HTTP para Microsoft Entra ID (MSAL):
  * Inyecta automáticamente el Bearer Token en cada solicitud al Resource Server (https://32.192.168.114/*).
- * Intenta primero la adquisición silenciosa con MSAL para los scopes protegidos registrados en Azure.
- * Si acquireTokenSilent no puede obtener el token debido a restricciones de consentimiento en el tenant
- * de Azure AD, previene de forma segura cualquier bucle de recarga (redirect loop) y utiliza como
- * fallback el token JWT oficial de la sesión activa autenticada (ID Token validado por Spring Boot).
+ * Prioriza el token JWT oficial de la sesión activa autenticada (ID Token validado por Spring Boot).
+ * Esto previene de raíz cualquier bucle de recarga (redirect loop) y evita peticiones inválidas
+ * a /oauth2/v2.0/token que causan error 400 Bad Request y revocación de sesión en Microsoft Entra ID.
  */
 @Injectable()
 export class MsalInterceptor implements HttpInterceptor {
@@ -104,16 +102,32 @@ export class MsalInterceptor implements HttpInterceptor {
       return next.handle(req);
     }
 
-    const account = this.authService.getActiveAccount();
-    const scopes = environment.apiConfig.protectedResourceScopes;
+    // 1. Priorizar el token válido autenticado en la sesión (ID Token de Microsoft Entra ID).
+    // Esto evita enviar peticiones inválidas a /oauth2/v2.0/token para aplicaciones no instaladas en el tenant,
+    // eliminando el error HTTP 400 y previniendo que Microsoft cierre la sesión por exceso de solicitudes fallidas.
+    const storedToken = this.authService.getStoredToken();
+    if (storedToken) {
+      console.info('[MsalInterceptor] Adjuntando Bearer Token verificado de sesión a:', req.url);
+      const cloned = req.clone({
+        setHeaders: {
+          Authorization: `Bearer ${storedToken}`
+        }
+      });
+      return next.handle(cloned);
+    }
 
-    if (account && scopes && scopes.length > 0) {
+    // 2. Si no hay token en almacenamiento, intentar adquisición silenciosa con scopes estándar OIDC
+    const account = this.authService.getActiveAccount();
+    if (account) {
       return this.msalService.acquireTokenSilent({
         account: account,
-        scopes: scopes
+        scopes: ['openid', 'profile', 'email']
       }).pipe(
         switchMap((result: AuthenticationResult) => {
-          const token = result.accessToken || result.idToken;
+          const token = result.idToken || result.accessToken;
+          if (token) {
+            this.authService.setToken(token);
+          }
           console.info('[MsalInterceptor] Bearer Token adjuntado vía MSAL acquireTokenSilent a:', req.url);
           const cloned = req.clone({
             setHeaders: {
@@ -123,31 +137,10 @@ export class MsalInterceptor implements HttpInterceptor {
           return next.handle(cloned);
         }),
         catchError((err) => {
-          console.warn('[MsalInterceptor] acquireTokenSilent no pudo adquirir token para scope delegado, aplicando token de sesión activa:', err?.message || err);
-          const fallbackToken = this.authService.getStoredToken();
-          if (fallbackToken) {
-            console.info('[MsalInterceptor] Adjuntando Bearer Token de sesión activa a:', req.url);
-            const cloned = req.clone({
-              setHeaders: {
-                Authorization: `Bearer ${fallbackToken}`
-              }
-            });
-            return next.handle(cloned);
-          }
+          console.warn('[MsalInterceptor] acquireTokenSilent no completado, continuando petición sin token:', err?.message || err);
           return next.handle(req);
         })
       );
-    }
-
-    const fallbackToken = this.authService.getStoredToken();
-    if (fallbackToken) {
-      console.info('[MsalInterceptor] Adjuntando Bearer Token almacenado a:', req.url);
-      const cloned = req.clone({
-        setHeaders: {
-          Authorization: `Bearer ${fallbackToken}`
-        }
-      });
-      return next.handle(cloned);
     }
 
     return next.handle(req);
