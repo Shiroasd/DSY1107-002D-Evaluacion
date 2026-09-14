@@ -24,20 +24,14 @@ spring:
 
   sql:
     init:
-      mode: never
+      mode: ${SPRING_SQL_INIT_MODE:always}
+      data-locations: classpath:data.sql
 
   h2:
     console:
       enabled: false
 
-logging:
-  level:
-    root: INFO
-    org.springframework.security: INFO
-    com.retail.inventory: INFO
-
-# Configuración explícita de Microsoft Entra ID (Resource Server) en AWS
-spring:
+  # Configuración explícita de Microsoft Entra ID (Resource Server) en AWS
   cloud:
     azure:
       active-directory:
@@ -48,6 +42,12 @@ spring:
           client-id: ${AZURE_CLIENT_ID:afcd0a4e-f3f3-4934-9861-4d8d13cecc30}
         client-id: ${AZURE_CLIENT_ID:afcd0a4e-f3f3-4934-9861-4d8d13cecc30}
         app-id-uri: ${AZURE_APP_ID_URI:api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30}
+
+logging:
+  level:
+    root: INFO
+    org.springframework.security: INFO
+    com.retail.inventory: INFO
 
 # Configuración de CORS para el Frontend Angular migrado a AWS
 app:
