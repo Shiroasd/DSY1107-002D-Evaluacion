@@ -82,7 +82,10 @@ export class AuthService {
     try {
       const base64Url = token.split('.')[1];
       if (!base64Url) return null;
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      while (base64.length % 4) {
+        base64 += '=';
+      }
       const jsonPayload = decodeURIComponent(
         atob(base64)
           .split('')

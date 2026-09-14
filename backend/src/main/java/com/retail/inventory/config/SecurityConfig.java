@@ -160,7 +160,13 @@ public class SecurityConfig {
         // Configura Access-Control-Allow-Origin para permitir exclusivamente las peticiones desde el frontend: https://32.193.45.223/
         configuration.setAllowedOrigins(Arrays.asList(
             "https://32.193.45.223",
-            "https://32.193.45.223/"
+            "https://32.193.45.223/",
+            "http://32.193.45.223",
+            "http://32.193.45.223/",
+            "http://localhost:4200",
+            "http://localhost:4200/",
+            "http://127.0.0.1:4200",
+            "http://127.0.0.1:4200/"
         ));
         
         // En Access-Control-Allow-Methods, habilita los verbos HTTP necesarios (GET, POST, PUT, DELETE) y obligatoriamente OPTIONS para Preflight

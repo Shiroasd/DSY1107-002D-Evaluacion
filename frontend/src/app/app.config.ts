@@ -34,13 +34,24 @@ export function loggerCallback(logLevel: LogLevel, message: string) {
   }
 }
 
+export function getRedirectUri(): string {
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:4200';
+    }
+    return window.location.origin.endsWith('/') ? window.location.origin : `${window.location.origin}/`;
+  }
+  return environment.msalConfig.auth.redirectUri;
+}
+
 export function MSALInstanceFactory(): IPublicClientApplication {
+  const redirectUri = getRedirectUri();
   return new PublicClientApplication({
     auth: {
       clientId: environment.msalConfig.auth.clientId,
       authority: environment.msalConfig.auth.authority,
-      redirectUri: environment.msalConfig.auth.redirectUri,
-      postLogoutRedirectUri: environment.msalConfig.auth.redirectUri,
+      redirectUri: redirectUri,
+      postLogoutRedirectUri: redirectUri,
       navigateToLoginRequestUrl: false
     },
     cache: {
@@ -71,8 +82,8 @@ import { AuthService } from './services/auth.service';
 
 export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
   const protectedResourceMap = new Map<string, Array<string>>();
-  // Mapeo explícito único de la IP del backend en AWS con los scopes protegidos de Azure
-  protectedResourceMap.set('https://32.192.168.114/*', environment.apiConfig.protectedResourceScopes);
+  protectedResourceMap.set('http://32.192.168.114:8080/*', environment.apiConfig.protectedResourceScopes);
+  protectedResourceMap.set('http://localhost:8080/api/v1/*', environment.apiConfig.protectedResourceScopes);
 
   return {
     interactionType: InteractionType.Popup,
@@ -82,18 +93,20 @@ export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
 
 /**
  * Interceptor HTTP para Microsoft Entra ID (MSAL):
- * Inyecta automáticamente el Bearer Token en cada solicitud al Resource Server (https://32.192.168.114/*).
+ * Inyecta automáticamente el Bearer Token en cada solicitud al Resource Server (Spring Boot).
  * Prioriza el token JWT oficial de la sesión activa autenticada (ID Token validado por Spring Boot).
- * Esto previene de raíz cualquier bucle de recarga (redirect loop) y evita peticiones inválidas
- * a /oauth2/v2.0/token que causan error 400 Bad Request y revocación de sesión en Microsoft Entra ID.
+ * Esto previene de raíz cualquier bucle de recarga (redirect loop), bloqueos por CORB en iframes
+ * ocultos de Me.htm?v=3 y peticiones no autorizadas.
  */
 @Injectable()
 export class MsalInterceptor implements HttpInterceptor {
   private authService = inject(AuthService);
-  private msalService = inject(MsalService);
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    const isApiRequest = req.url.includes('/api/v1') || req.url.startsWith(environment.apiConfig.baseUrl) || req.url.includes('32.192.168.114');
+    const isApiRequest = req.url.includes('/api/v1') ||
+                         req.url.startsWith(environment.apiConfig.baseUrl) ||
+                         req.url.includes('32.192.168.114') ||
+                         req.url.includes('localhost:8080');
     if (!isApiRequest) {
       return next.handle(req);
     }
@@ -102,12 +115,9 @@ export class MsalInterceptor implements HttpInterceptor {
       return next.handle(req);
     }
 
-    // 1. Priorizar el token válido autenticado en la sesión (ID Token de Microsoft Entra ID).
-    // Esto evita enviar peticiones inválidas a /oauth2/v2.0/token para aplicaciones no instaladas en el tenant,
-    // eliminando el error HTTP 400 y previniendo que Microsoft cierre la sesión por exceso de solicitudes fallidas.
+    // 1. Obtener el token JWT oficial autenticado de la sesión activa
     const storedToken = this.authService.getStoredToken();
     if (storedToken) {
-      console.info('[MsalInterceptor] Adjuntando Bearer Token verificado de sesión a:', req.url);
       const cloned = req.clone({
         setHeaders: {
           Authorization: `Bearer ${storedToken}`
@@ -116,33 +126,7 @@ export class MsalInterceptor implements HttpInterceptor {
       return next.handle(cloned);
     }
 
-    // 2. Si no hay token en almacenamiento, intentar adquisición silenciosa con scopes estándar OIDC
-    const account = this.authService.getActiveAccount();
-    if (account) {
-      return this.msalService.acquireTokenSilent({
-        account: account,
-        scopes: ['openid', 'profile', 'email']
-      }).pipe(
-        switchMap((result: AuthenticationResult) => {
-          const token = result.idToken || result.accessToken;
-          if (token) {
-            this.authService.setToken(token);
-          }
-          console.info('[MsalInterceptor] Bearer Token adjuntado vía MSAL acquireTokenSilent a:', req.url);
-          const cloned = req.clone({
-            setHeaders: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-          return next.handle(cloned);
-        }),
-        catchError((err) => {
-          console.warn('[MsalInterceptor] acquireTokenSilent no completado, continuando petición sin token:', err?.message || err);
-          return next.handle(req);
-        })
-      );
-    }
-
+    // Si aún no se resuelve el token pero hay cuenta activa, continuar la petición
     return next.handle(req);
   }
 }
