@@ -35,3 +35,45 @@ logging:
     root: INFO
     org.springframework.security: INFO
     com.retail.inventory: INFO
+
+# Configuración explícita de Microsoft Entra ID (Resource Server) en AWS
+spring:
+  cloud:
+    azure:
+      active-directory:
+        enabled: true
+        profile:
+          tenant-id: ${AZURE_TENANT_ID:73d72038-30bf-4ab9-85bc-a402de679470}
+        credential:
+          client-id: ${AZURE_CLIENT_ID:afcd0a4e-f3f3-4934-9861-4d8d13cecc30}
+        client-id: ${AZURE_CLIENT_ID:afcd0a4e-f3f3-4934-9861-4d8d13cecc30}
+        app-id-uri: ${AZURE_APP_ID_URI:api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30}
+
+# Configuración de CORS para el Frontend Angular migrado a AWS
+app:
+  cors:
+    allowed-origins:
+      - "https://32.193.45.223"
+      - "http://localhost:4200"
+      - "http://127.0.0.1:4200"
+      - "https://localhost:4200"
+    allowed-methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+      - "PATCH"
+      - "HEAD"
+    allowed-headers:
+      - "Authorization"
+      - "Content-Type"
+      - "Accept"
+      - "Origin"
+      - "X-Requested-With"
+      - "Access-Control-Request-Method"
+      - "Access-Control-Request-Headers"
+    exposed-headers:
+      - "Authorization"
+      - "Location"
+

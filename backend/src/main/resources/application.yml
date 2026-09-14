@@ -7,7 +7,7 @@ spring:
   application:
     name: inventory-backend
 
-  # Configuración exacta de Microsoft Entra ID (Azure Active Directory)
+  # Configuración exacta de Microsoft Entra ID (Azure Active Directory / Resource Server)
   cloud:
     azure:
       active-directory:
@@ -16,7 +16,20 @@ spring:
           tenant-id: ${AZURE_TENANT_ID:73d72038-30bf-4ab9-85bc-a402de679470}
         credential:
           client-id: ${AZURE_CLIENT_ID:afcd0a4e-f3f3-4934-9861-4d8d13cecc30}
+        client-id: ${AZURE_CLIENT_ID:afcd0a4e-f3f3-4934-9861-4d8d13cecc30}
         app-id-uri: ${AZURE_APP_ID_URI:api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30}
+
+  # Configuración estándar de Spring Security OAuth2 Resource Server para validación de tokens JWT
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID:73d72038-30bf-4ab9-85bc-a402de679470}/v2.0
+          jwk-set-uri: https://login.microsoftonline.com/common/discovery/v2.0/keys
+          audiences:
+            - ${AZURE_CLIENT_ID:afcd0a4e-f3f3-4934-9861-4d8d13cecc30}
+            - ${AZURE_APP_ID_URI:api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30}
+            - 57c1db2d-484b-463a-b993-45c3ef349e3c
 
   # Configuración de Persistencia (H2 para desarrollo/test local, AWS RDS / PostgreSQL para Cloud)
   datasource:
@@ -55,3 +68,32 @@ logging:
     org.springframework.security.oauth2: DEBUG
     com.azure.spring.cloud.autoconfigure.implementation.aad: INFO
     com.retail.inventory: DEBUG
+
+# Configuración de CORS para el Frontend Angular migrado a AWS
+app:
+  cors:
+    allowed-origins:
+      - "https://32.193.45.223"
+      - "http://localhost:4200"
+      - "http://127.0.0.1:4200"
+      - "https://localhost:4200"
+    allowed-methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+      - "PATCH"
+      - "HEAD"
+    allowed-headers:
+      - "Authorization"
+      - "Content-Type"
+      - "Accept"
+      - "Origin"
+      - "X-Requested-With"
+      - "Access-Control-Request-Method"
+      - "Access-Control-Request-Headers"
+    exposed-headers:
+      - "Authorization"
+      - "Location"
+

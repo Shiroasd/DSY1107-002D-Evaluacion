@@ -99,7 +99,7 @@ export class InventoryService {
       userMessage = error.error?.message || 'Por favor revise los datos del formulario.';
     } else if (error.status === 0) {
       userTitle = 'Servidor Inaccesible';
-      userMessage = 'No fue posible conectar con el Resource Server en http://localhost:8080. Verifique que el backend esté en ejecución.';
+      userMessage = `No fue posible conectar con el Resource Server en ${this.baseUrl}. Verifique que el backend esté en ejecución y que la configuración de CORS y red permita la conexión.`;
     }
 
     this.errorNotificationSubject.next({

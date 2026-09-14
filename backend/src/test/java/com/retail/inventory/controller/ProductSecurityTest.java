@@ -16,7 +16,9 @@ import java.math.BigDecimal;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -98,5 +100,48 @@ class ProductSecurityTest {
                                 .authorities(new SimpleGrantedAuthority("ROLE_USER"))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/products con scope delegado OT.Create debe permitir creación y retornar 201 Created")
+    void createProductWithScopeOTCreateShouldReturn201() throws Exception {
+        ProductRequestDto newProduct = ProductRequestDto.builder()
+                .sku("SCOPE-OT-001")
+                .name("Terminal OT Autorizado")
+                .price(new BigDecimal("150.00"))
+                .stock(5)
+                .categoryId(1L)
+                .build();
+
+        mockMvc.perform(post("/api/v1/products")
+                        .with(jwt().jwt(jwt -> jwt.claim("sub", "api-client-ot"))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_OT.Create")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newProduct)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.sku").value("SCOPE-OT-001"))
+                .andExpect(jsonPath("$.name").value("Terminal OT Autorizado"));
+    }
+
+    @Test
+    @DisplayName("CORS Preflight OPTIONS /api/v1/products desde origen https://32.193.45.223 debe retornar 200 OK con cabeceras CORS")
+    void preflightCorsFromAwsFrontendShouldReturn200() throws Exception {
+        mockMvc.perform(options("/api/v1/products")
+                        .header("Origin", "https://32.193.45.223")
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "Authorization,Content-Type"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "https://32.193.45.223"))
+                .andExpect(header().string("Access-Control-Allow-Methods", org.hamcrest.Matchers.containsString("POST")));
+    }
+
+    @Test
+    @DisplayName("Petición autenticada desde origen AWS https://32.193.45.223 debe incluir cabecera Access-Control-Allow-Origin")
+    void actualRequestFromAwsFrontendShouldIncludeCorsHeader() throws Exception {
+        mockMvc.perform(get("/api/v1/products")
+                        .header("Origin", "https://32.193.45.223")
+                        .with(jwt().jwt(jwt -> jwt.claim("sub", "user-aws-frontend"))))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "https://32.193.45.223"));
     }
 }

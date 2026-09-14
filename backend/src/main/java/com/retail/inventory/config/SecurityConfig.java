@@ -3,6 +3,7 @@ package com.retail.inventory.config;
 import com.retail.inventory.exception.CustomAccessDeniedHandler;
 import com.retail.inventory.exception.CustomAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -39,10 +40,19 @@ public class SecurityConfig {
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
 
+    @Value("${spring.cloud.azure.active-directory.credential.client-id:afcd0a4e-f3f3-4934-9861-4d8d13cecc30}")
+    private String clientId;
+
+    @Value("${spring.cloud.azure.active-directory.app-id-uri:api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30}")
+    private String appIdUri;
+
+    @Value("${spring.cloud.azure.active-directory.profile.tenant-id:73d72038-30bf-4ab9-85bc-a402de679470}")
+    private String tenantId;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // Habilitar CORS para integración con Angular SPA
+            // Habilitar CORS para integración con Angular SPA en AWS
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             
             // Deshabilitar CSRF dado que el Resource Server es Stateless con Bearer Tokens
@@ -58,14 +68,17 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Consola H2 para inspección de datos locales
                 .requestMatchers("/h2-console/**").permitAll()
-                // Peticiones Preflight de CORS
+                // Peticiones Preflight de CORS siempre permitidas
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // Endpoints GET accesibles para cualquier usuario autenticado
                 .requestMatchers(HttpMethod.GET, "/api/v1/products/**", "/api/v1/categories/**").authenticated()
-                // Endpoints de modificación requieren rol Admin a nivel de filtro y @PreAuthorize
-                .requestMatchers(HttpMethod.POST, "/api/v1/products/**", "/api/v1/categories/**").hasRole("Admin")
-                .requestMatchers(HttpMethod.PUT, "/api/v1/products/**", "/api/v1/categories/**").hasRole("Admin")
-                .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**", "/api/v1/categories/**").hasRole("Admin")
+                // Endpoints de creación y modificación: Validan rol Admin o permisos/scopes delegados (ej. OT.Create)
+                .requestMatchers(HttpMethod.POST, "/api/v1/products/**", "/api/v1/categories/**")
+                    .hasAnyAuthority("ROLE_Admin", "SCOPE_OT.Create", "OT.Create")
+                .requestMatchers(HttpMethod.PUT, "/api/v1/products/**", "/api/v1/categories/**")
+                    .hasAnyAuthority("ROLE_Admin", "SCOPE_OT.Create", "OT.Create", "SCOPE_OT.Update", "OT.Update")
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**", "/api/v1/categories/**")
+                    .hasAnyAuthority("ROLE_Admin", "SCOPE_OT.Delete", "OT.Delete")
                 // Cualquier otra solicitud requiere autenticación
                 .anyRequest().authenticated()
             )
@@ -102,11 +115,11 @@ public class SecurityConfig {
         // 1. Validador de vigencia de tiempo (exp y nbf)
         OAuth2TokenValidator<Jwt> timestampValidator = new org.springframework.security.oauth2.jwt.JwtTimestampValidator();
 
-        // 2. Validador de Emisor (acepta formato v2.0 y v1.0 de Microsoft Entra ID para el tenant)
+        // 2. Validador de Emisor (acepta formato v2.0 y v1.0 de Microsoft Entra ID para el tenant configurado)
         OAuth2TokenValidator<Jwt> issuerValidator = token -> {
             if (token.getIssuer() != null) {
                 String iss = token.getIssuer().toString();
-                if (iss.contains("73d72038-30bf-4ab9-85bc-a402de679470") ||
+                if (iss.contains(tenantId) ||
                     iss.startsWith("https://login.microsoftonline.com/") ||
                     iss.startsWith("https://sts.windows.net/")) {
                     return OAuth2TokenValidatorResult.success();
@@ -115,12 +128,13 @@ public class SecurityConfig {
             return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Emisor (iss) no reconocido: " + token.getIssuer(), null));
         };
 
-        // 3. Validador de Audiencia (Backend App ID, Frontend App ID o App ID URI)
+        // 3. Validador de Audiencia (Backend App ID, App ID URI, Frontend Client ID)
         OAuth2TokenValidator<Jwt> audienceValidator = token -> {
             List<String> audiences = token.getAudience();
             if (audiences != null && !audiences.isEmpty()) {
                 for (String aud : audiences) {
-                    if (aud.contains("afcd0a4e-f3f3-4934-9861-4d8d13cecc30") ||
+                    if (aud.contains(clientId) ||
+                        aud.contains(appIdUri) ||
                         aud.contains("57c1db2d-484b-463a-b993-45c3ef349e3c") ||
                         aud.contains("00000003-0000-0000-c000-000000000000") ||
                         aud.contains("graph.microsoft.com")) {
@@ -135,27 +149,45 @@ public class SecurityConfig {
         return jwtDecoder;
     }
 
+    /**
+     * Configuración de CORS requerida para permitir la comunicación entre el Frontend Angular
+     * en AWS (https://32.193.45.223/) y el Resource Server (Spring Boot).
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Orígenes permitidos (Localhost, AWS API Gateway, S3, CloudFront y dominios de nube)
-        configuration.setAllowedOriginPatterns(List.of(
-            "*",
+        
+        // Orígenes permitidos requeridos explícitamente
+        configuration.setAllowedOrigins(Arrays.asList(
+            "https://32.193.45.223",
             "http://localhost:4200",
             "http://127.0.0.1:4200",
             "https://localhost:4200"
         ));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
+        
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+            "https://32.193.45.223*",
+            "http://localhost:*",
+            "http://127.0.0.1:*"
+        ));
+        
+        // Métodos HTTP requeridos
+        configuration.setAllowedMethods(Arrays.asList(
+            "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"
+        ));
+        
+        // Encabezados HTTP requeridos (Content-Type y Authorization)
         configuration.setAllowedHeaders(Arrays.asList(
             "Authorization",
             "Content-Type",
             "Accept",
-            "X-Requested-With",
             "Origin",
+            "X-Requested-With",
             "Access-Control-Request-Method",
             "Access-Control-Request-Headers"
         ));
-        configuration.setExposedHeaders(List.of("Authorization", "Location"));
+        
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Location", "Content-Disposition"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 

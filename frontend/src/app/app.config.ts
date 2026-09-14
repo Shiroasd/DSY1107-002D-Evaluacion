@@ -72,7 +72,7 @@ import { AuthService } from './services/auth.service';
 export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
   return {
     interactionType: InteractionType.Redirect,
-    protectedResourceMap: new Map()
+    protectedResourceMap: environment.apiConfig.protectedResourceMap
   };
 }
 

@@ -67,13 +67,18 @@ public class AzureJwtGrantedAuthoritiesConverter implements Converter<Jwt, Colle
         if (scpObj instanceof String scpString) {
             for (String scope : scpString.split("\\s+")) {
                 if (!scope.isBlank()) {
-                    authorities.add(new SimpleGrantedAuthority(SCOPE_PREFIX + scope));
+                    String cleanScope = scope.trim();
+                    authorities.add(new SimpleGrantedAuthority(SCOPE_PREFIX + cleanScope));
+                    // También agregar sin prefijo para permitir validación directa hasAuthority('OT.Create')
+                    authorities.add(new SimpleGrantedAuthority(cleanScope));
                 }
             }
         } else if (scpObj instanceof Collection<?> scpCollection) {
             for (Object scp : scpCollection) {
                 if (scp instanceof String scopeStr && !scopeStr.isBlank()) {
-                    authorities.add(new SimpleGrantedAuthority(SCOPE_PREFIX + scopeStr));
+                    String cleanScope = scopeStr.trim();
+                    authorities.add(new SimpleGrantedAuthority(SCOPE_PREFIX + cleanScope));
+                    authorities.add(new SimpleGrantedAuthority(cleanScope));
                 }
             }
         }

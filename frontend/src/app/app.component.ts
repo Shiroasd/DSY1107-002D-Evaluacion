@@ -6,6 +6,8 @@ import { NavbarComponent } from './components/navbar/navbar.component';
 import { AlertComponent } from './components/alert/alert.component';
 import { AuthService } from './services/auth.service';
 
+import { environment } from '../environments/environment';
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -17,6 +19,7 @@ export class AppComponent implements OnInit {
   private msalService = inject(MsalService);
   public authService = inject(AuthService);
   private router = inject(Router);
+  public apiBaseUrl = environment.apiConfig.baseUrl;
 
   ngOnInit(): void {
     // Procesar respuesta de redirección tras autenticación con Microsoft Entra ID

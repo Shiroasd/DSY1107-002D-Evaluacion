@@ -55,20 +55,20 @@ public class ProductController {
     }
 
     /**
-     * Registrar nuevo producto. Protegido: Requiere rol 'Admin'.
+     * Registrar nuevo producto. Protegido: Requiere rol 'Admin' o permiso/scope delegado (ej. 'OT.Create').
      */
     @PostMapping
-    @PreAuthorize("hasRole('Admin')")
+    @PreAuthorize("hasRole('Admin') or hasAuthority('SCOPE_OT.Create') or hasAuthority('OT.Create')")
     public ResponseEntity<ProductResponseDto> createProduct(@Valid @RequestBody ProductRequestDto requestDto) {
         ProductResponseDto created = productService.createProduct(requestDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     /**
-     * Actualizar producto existente. Protegido: Requiere rol 'Admin'.
+     * Actualizar producto existente. Protegido: Requiere rol 'Admin' o permiso/scope delegado.
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('Admin')")
+    @PreAuthorize("hasRole('Admin') or hasAuthority('SCOPE_OT.Create') or hasAuthority('OT.Create') or hasAuthority('SCOPE_OT.Update') or hasAuthority('OT.Update')")
     public ResponseEntity<ProductResponseDto> updateProduct(
             @PathVariable Long id,
             @Valid @RequestBody ProductRequestDto requestDto) {
@@ -76,10 +76,10 @@ public class ProductController {
     }
 
     /**
-     * Eliminar producto del inventario. Protegido: Requiere rol 'Admin'.
+     * Eliminar producto del inventario. Protegido: Requiere rol 'Admin' o permiso/scope delegado.
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('Admin')")
+    @PreAuthorize("hasRole('Admin') or hasAuthority('SCOPE_OT.Delete') or hasAuthority('OT.Delete')")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
         return ResponseEntity.noContent().build();
