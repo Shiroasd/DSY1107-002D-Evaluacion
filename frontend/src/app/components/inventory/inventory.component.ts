@@ -37,9 +37,20 @@ export class InventoryComponent implements OnInit {
   public productToDelete: Product | null = null;
 
   ngOnInit(): void {
-    if (this.authService.getStoredToken() || this.authService.getActiveAccount()) {
+    if (this.authService.getStoredToken()) {
       this.loadCategories();
       this.loadProducts();
+    } else if (this.authService.getActiveAccount()) {
+      this.authService.acquireToken().subscribe({
+        next: () => {
+          this.loadCategories();
+          this.loadProducts();
+        },
+        error: () => {
+          this.loadCategories();
+          this.loadProducts();
+        }
+      });
     } else {
       this.authService.isAuthenticated$
         .pipe(

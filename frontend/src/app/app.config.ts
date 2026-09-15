@@ -106,6 +106,7 @@ export class MsalInterceptor implements HttpInterceptor {
     const isApiRequest = req.url.includes('/api/v1') ||
                          req.url.startsWith(environment.apiConfig.baseUrl) ||
                          req.url.includes('32.192.168.114') ||
+                         req.url.includes('32.193.45.223') ||
                          req.url.includes('localhost:8081') ||
                          req.url.includes('localhost:8080');
     if (!isApiRequest) {
@@ -116,7 +117,7 @@ export class MsalInterceptor implements HttpInterceptor {
       return next.handle(req);
     }
 
-    // 1. Obtener el token JWT oficial autenticado de la sesión activa
+    // 1. Si ya existe un token JWT válido en caché, adjuntarlo directamente
     const storedToken = this.authService.getStoredToken();
     if (storedToken) {
       const cloned = req.clone({
@@ -127,8 +128,23 @@ export class MsalInterceptor implements HttpInterceptor {
       return next.handle(cloned);
     }
 
-    // Si aún no se resuelve el token pero hay cuenta activa, continuar la petición
-    return next.handle(req);
+    // 2. Si no hay token válido o ha expirado pero hay cuenta activa, renovarlo silenciosamente de forma reactiva
+    return this.authService.acquireToken().pipe(
+      switchMap((token) => {
+        if (token) {
+          const cloned = req.clone({
+            setHeaders: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+          return next.handle(cloned);
+        }
+        return next.handle(req);
+      }),
+      catchError(() => {
+        return next.handle(req);
+      })
+    );
   }
 }
 

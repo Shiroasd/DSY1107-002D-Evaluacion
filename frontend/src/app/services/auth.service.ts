@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MsalService, MsalBroadcastService } from '@azure/msal-angular';
-import { EventMessage, EventType, InteractionStatus } from '@azure/msal-browser';
-import { BehaviorSubject, Observable, filter } from 'rxjs';
+import { EventMessage, EventType, InteractionStatus, AuthenticationResult } from '@azure/msal-browser';
+import { BehaviorSubject, Observable, filter, of, catchError, map } from 'rxjs';
 import { UserProfile } from '../models/user-profile.model';
 import { environment } from '../../environments/environment';
 
@@ -349,6 +349,52 @@ export class AuthService {
     }
 
     return null;
+  }
+
+  /**
+   * Adquiere un token válido de forma transparente y reactiva.
+   * 1. Retorna el token en caché si aún no ha expirado.
+   * 2. Si ha expirado o no está en memoria, invoca acquireTokenSilent() de MSAL
+   *    para renovarlo en segundo plano con Microsoft Entra ID usando el refresh token.
+   */
+  public acquireToken(): Observable<string | null> {
+    const existingToken = this.getStoredToken();
+    if (existingToken) {
+      return of(existingToken);
+    }
+
+    const account = this.getActiveAccount();
+    if (!account) {
+      return of(null);
+    }
+
+    const silentRequest = {
+      account: account,
+      scopes: ['openid', 'profile', 'email']
+    };
+
+    return this.msalService.acquireTokenSilent(silentRequest).pipe(
+      map((result: AuthenticationResult) => {
+        if (result.account) {
+          this.msalService.instance.setActiveAccount(result.account);
+        }
+        const candidateToken = result.idToken || result.accessToken;
+        if (candidateToken && this.isTokenValid(candidateToken)) {
+          this.setToken(candidateToken);
+          this.updateUserState();
+          return candidateToken;
+        } else if (result.idToken) {
+          this.setToken(result.idToken);
+          this.updateUserState();
+          return result.idToken;
+        }
+        return null;
+      }),
+      catchError((error) => {
+        console.warn('[AuthService] Renovación silenciosa de token falló:', error);
+        return of(null);
+      })
+    );
   }
 
   public getActiveAccount() {

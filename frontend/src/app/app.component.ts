@@ -41,6 +41,7 @@ export class AppComponent implements OnInit {
             const active = this.msalService.instance.getActiveAccount() || accounts[0];
             this.msalService.instance.setActiveAccount(active);
             this.authService.updateUserState();
+            this.authService.acquireToken().subscribe();
 
             const path = window.location.pathname;
             if (path === '/' || path === '' || path === '/index.html') {

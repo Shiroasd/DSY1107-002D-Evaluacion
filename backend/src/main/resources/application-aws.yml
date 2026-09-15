@@ -43,6 +43,18 @@ spring:
         client-id: ${AZURE_CLIENT_ID:afcd0a4e-f3f3-4934-9861-4d8d13cecc30}
         app-id-uri: ${AZURE_APP_ID_URI:api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30}
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID:73d72038-30bf-4ab9-85bc-a402de679470}/v2.0
+          jwk-set-uri: https://login.microsoftonline.com/common/discovery/v2.0/keys
+          audiences:
+            - ${AZURE_CLIENT_ID:afcd0a4e-f3f3-4934-9861-4d8d13cecc30}
+            - ${AZURE_APP_ID_URI:api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30}
+            - 57c1db2d-484b-463a-b993-45c3ef349e3c
+            - 61d2f1d7-99e9-4cf7-83fc-51456a9eb5b6
+
 logging:
   level:
     root: INFO

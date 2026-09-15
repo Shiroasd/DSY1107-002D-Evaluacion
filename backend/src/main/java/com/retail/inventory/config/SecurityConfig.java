@@ -136,6 +136,7 @@ public class SecurityConfig {
                     if (aud.contains(clientId) ||
                         aud.contains(appIdUri) ||
                         aud.contains("57c1db2d-484b-463a-b993-45c3ef349e3c") ||
+                        aud.contains("61d2f1d7-99e9-4cf7-83fc-51456a9eb5b6") ||
                         aud.contains("00000003-0000-0000-c000-000000000000") ||
                         aud.contains("graph.microsoft.com")) {
                         return OAuth2TokenValidatorResult.success();

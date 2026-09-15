@@ -12,11 +12,13 @@ export const environment = {
     }
   },
   apiConfig: {
-    baseUrl: 'https://32.192.168.114:8081/api/v1',
+    baseUrl: '/api/v1',
     scope: 'api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30/user_impersonation',
     protectedResourceScopes: ['User.Read'],
     protectedResourceMap: new Map<string, Array<string>>([
-      ['https://32.192.168.114:8081/api/v1', ['User.Read']]
+      ['/api/v1', ['User.Read']],
+      ['https://32.193.45.223/api/v1', ['User.Read']],
+      ['http://32.192.168.114:8081/api/v1', ['User.Read']]
     ])
   }
 };
