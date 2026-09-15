@@ -39,13 +39,10 @@ export class LandingComponent implements OnInit {
       }
     });
 
-    // Desbloquear cuando finalice cualquier interacción previa
+    // Habilitar el botón únicamente cuando el estado sea InteractionStatus.None
     this.msalBroadcastService.inProgress$
-      .pipe(
-        filter((status: InteractionStatus) => status === InteractionStatus.None)
-      )
-      .subscribe(() => {
-        this.isLoggingIn = false;
+      .subscribe((status: InteractionStatus) => {
+        this.isLoggingIn = status !== InteractionStatus.None;
       });
   }
 

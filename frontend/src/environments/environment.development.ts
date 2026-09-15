@@ -5,6 +5,10 @@ export const environment = {
       clientId: '57c1db2d-484b-463a-b993-45c3ef349e3c',
       authority: 'https://login.microsoftonline.com/73d72038-30bf-4ab9-85bc-a402de679470',
       redirectUri: 'http://localhost:4200'
+    },
+    cache: {
+      cacheLocation: 'localStorage',
+      storeAuthStateInCookie: true
     }
   },
   apiConfig: {
@@ -19,4 +23,3 @@ export const environment = {
     ])
   }
 };
-
