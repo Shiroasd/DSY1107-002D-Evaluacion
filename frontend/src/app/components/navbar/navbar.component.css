@@ -179,6 +179,13 @@
   transform: translateY(-1px);
 }
 
+.btn-login:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .btn-logout {
   display: flex;
   align-items: center;

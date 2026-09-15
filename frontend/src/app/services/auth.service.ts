@@ -23,11 +23,18 @@ export class AuthService {
   private isAdminSubject = new BehaviorSubject<boolean>(false);
   public isAdmin$: Observable<boolean> = this.isAdminSubject.asObservable();
 
+  public isInteractionInProgress = false;
+
   constructor() {
     this.initMsalEvents();
   }
 
   private initMsalEvents(): void {
+    // Escuchar el estado de interacción de MSAL para prevenir llamadas concurrentes
+    this.msalBroadcastService.inProgress$.subscribe((status: InteractionStatus) => {
+      this.isInteractionInProgress = status !== InteractionStatus.None;
+    });
+
     // Escuchar cuando no haya interacción activa en MSAL
     this.msalBroadcastService.inProgress$
       .pipe(filter((status: InteractionStatus) => status === InteractionStatus.None))
@@ -174,12 +181,24 @@ export class AuthService {
   }
 
   /**
+   * Expone el procesamiento reactivo del callback de redirección de MSAL
+   */
+  public handleRedirectObservable(): Observable<any> {
+    return this.msalService.handleRedirectObservable();
+  }
+
+  /**
    * Flujo de inicio de sesión con Microsoft Entra ID (Azure AD).
    * 1. Si ya existe una cuenta conectada en el caché local de MSAL, la activa inmediatamente.
    * 2. Si no, solicita autenticación usando los scopes estándar ('openid', 'profile', 'email')
    *    para garantizar compatibilidad total con cuentas institucionales / académicas.
    */
   public login(): void {
+    if (this.isInteractionInProgress) {
+      console.warn('[AuthService] Interacción en progreso, ignorando invocación concurrente a loginRedirect.');
+      return;
+    }
+
     console.log('Iniciando flujo de login...');
     try {
       // 1. Limpiar posibles bloqueos residuales de interacción en sessionStorage y localStorage

@@ -105,6 +105,14 @@
   transform: translateY(0);
 }
 
+.btn-primary-cta:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  filter: grayscale(20%);
+}
+
 .btn-secondary-cta {
   display: inline-flex;
   align-items: center;

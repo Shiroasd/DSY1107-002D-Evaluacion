@@ -23,7 +23,7 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     console.log('[AppComponent] Inicializando y escuchando handleRedirectObservable...');
-    this.msalService.handleRedirectObservable().subscribe({
+    this.authService.handleRedirectObservable().subscribe({
       next: (result: AuthenticationResult | null) => {
         if (result) {
           console.log('[AppComponent] Autenticación completada exitosamente vía redirección:', result.account?.username);
