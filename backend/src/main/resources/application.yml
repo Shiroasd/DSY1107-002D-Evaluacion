@@ -72,6 +72,8 @@ logging:
 
 # Configuración de CORS para el Frontend Angular migrado a AWS
 app:
+  security:
+    default-admin: true
   cors:
     allowed-origins:
       - "https://32.193.45.223"

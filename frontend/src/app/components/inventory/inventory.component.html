@@ -282,6 +282,7 @@
     *ngIf="isModalOpen"
     [product]="selectedProduct"
     [categories]="categories"
+    [isSubmitting]="isSubmittingProduct"
     (save)="onSaveProduct($event)"
     (close)="closeModal()"
   ></app-product-modal>
@@ -302,8 +303,10 @@
         Esta acción requiere rol <strong>'Admin'</strong> en Azure AD.
       </p>
       <div class="confirm-actions">
-        <button (click)="cancelDelete()" class="btn-secondary">Cancelar</button>
-        <button (click)="executeDelete()" class="btn-danger">Confirmar Eliminación</button>
+        <button (click)="cancelDelete()" class="btn-secondary" [disabled]="isDeletingProduct">Cancelar</button>
+        <button (click)="executeDelete()" class="btn-danger" [disabled]="isDeletingProduct">
+          {{ isDeletingProduct ? 'Eliminando...' : 'Confirmar Eliminación' }}
+        </button>
       </div>
     </div>
   </div>

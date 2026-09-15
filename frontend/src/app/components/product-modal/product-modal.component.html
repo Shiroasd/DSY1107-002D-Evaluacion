@@ -128,9 +128,10 @@
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn-secondary" (click)="onCancel()">Cancelar</button>
-        <button type="submit" class="btn-primary" [disabled]="form.invalid">
-          {{ product ? 'Guardar Cambios' : 'Registrar Producto' }}
+        <button type="button" class="btn-secondary" (click)="onCancel()" [disabled]="isSubmitting">Cancelar</button>
+        <button type="submit" class="btn-primary" [disabled]="form.invalid || isSubmitting">
+          <span *ngIf="isSubmitting" style="display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 6px;"></span>
+          <span>{{ isSubmitting ? 'Guardando...' : (product ? 'Guardar Cambios' : 'Registrar Producto') }}</span>
         </button>
       </div>
     </form>

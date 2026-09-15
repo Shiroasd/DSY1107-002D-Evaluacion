@@ -126,62 +126,85 @@ export class InventoryComponent implements OnInit {
     });
   }
 
+  public isSubmittingProduct: boolean = false;
+
   // Modal Actions
   public openCreateModal(): void {
     this.selectedProduct = null;
+    this.isSubmittingProduct = false;
     this.isModalOpen = true;
   }
 
   public openEditModal(product: Product): void {
     this.selectedProduct = product;
+    this.isSubmittingProduct = false;
     this.isModalOpen = true;
   }
 
   public closeModal(): void {
     this.isModalOpen = false;
     this.selectedProduct = null;
+    this.isSubmittingProduct = false;
   }
 
   public onSaveProduct(request: ProductRequest): void {
+    this.isSubmittingProduct = true;
     if (this.selectedProduct) {
       // Actualizar (PUT)
       this.inventoryService.updateProduct(this.selectedProduct.id, request).subscribe({
         next: () => {
+          this.isSubmittingProduct = false;
           this.closeModal();
           this.loadProducts();
         },
-        error: (err) => console.error('Error en actualización', err)
+        error: (err) => {
+          this.isSubmittingProduct = false;
+          this.closeModal();
+          console.error('Error en actualización', err);
+        }
       });
     } else {
       // Crear (POST)
       this.inventoryService.createProduct(request).subscribe({
         next: () => {
+          this.isSubmittingProduct = false;
           this.closeModal();
           this.loadProducts();
         },
-        error: (err) => console.error('Error en creación', err)
+        error: (err) => {
+          this.isSubmittingProduct = false;
+          this.closeModal();
+          console.error('Error en creación', err);
+        }
       });
     }
   }
 
+  public isDeletingProduct: boolean = false;
+
   // Delete Action
   public confirmDelete(product: Product): void {
     this.productToDelete = product;
+    this.isDeletingProduct = false;
   }
 
   public cancelDelete(): void {
+    if (this.isDeletingProduct) return;
     this.productToDelete = null;
   }
 
   public executeDelete(): void {
-    if (!this.productToDelete) return;
+    if (!this.productToDelete || this.isDeletingProduct) return;
 
+    this.isDeletingProduct = true;
     this.inventoryService.deleteProduct(this.productToDelete.id).subscribe({
       next: () => {
+        this.isDeletingProduct = false;
         this.productToDelete = null;
         this.loadProducts();
       },
       error: (err) => {
+        this.isDeletingProduct = false;
         this.productToDelete = null;
         console.error('Error en eliminación', err);
       }

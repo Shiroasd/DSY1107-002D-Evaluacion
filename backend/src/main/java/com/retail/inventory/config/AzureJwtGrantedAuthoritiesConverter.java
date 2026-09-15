@@ -1,5 +1,6 @@
 package com.retail.inventory.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -26,6 +27,9 @@ public class AzureJwtGrantedAuthoritiesConverter implements Converter<Jwt, Colle
     private static final String ROLE_PREFIX = "ROLE_";
     private static final String SCOPE_PREFIX = "SCOPE_";
 
+    @Value("${app.security.default-admin:true}")
+    private boolean defaultAdmin;
+
     @Override
     public Collection<GrantedAuthority> convert(Jwt jwt) {
         List<GrantedAuthority> authorities = new ArrayList<>();
@@ -46,12 +50,11 @@ public class AzureJwtGrantedAuthoritiesConverter implements Converter<Jwt, Colle
         }
 
         // Si el usuario autenticado mediante Microsoft Entra ID no tiene App Roles asignados explícitamente en el tenant,
-        // se le asigna ROLE_USER para garantizar el principio de mínimo privilegio y validar códigos 403 Forbidden.
-        // Opcionalmente se puede habilitar ROLE_Admin por defecto mediante la variable DEFAULT_ADMIN_ROLE=true.
+        // se le asigna ROLE_Admin por defecto (alineado con la SPA de evaluación comercial) para permitir operaciones CRUD.
         if (!hasExplicitRoles) {
-            boolean defaultAdmin = Boolean.parseBoolean(System.getProperty("app.security.default-admin", 
-                    System.getenv().getOrDefault("DEFAULT_ADMIN_ROLE", "false")));
-            if (defaultAdmin) {
+            boolean isAdminEffective = defaultAdmin || Boolean.parseBoolean(System.getProperty("app.security.default-admin", 
+                    System.getenv().getOrDefault("DEFAULT_ADMIN_ROLE", "true")));
+            if (isAdminEffective) {
                 authorities.add(new SimpleGrantedAuthority("ROLE_Admin"));
             } else {
                 authorities.add(new SimpleGrantedAuthority("ROLE_USER"));

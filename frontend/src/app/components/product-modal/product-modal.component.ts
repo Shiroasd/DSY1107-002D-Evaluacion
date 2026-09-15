@@ -16,6 +16,7 @@ export class ProductModalComponent implements OnInit {
 
   @Input() product: Product | null = null;
   @Input() categories: Category[] = [];
+  @Input() isSubmitting: boolean = false;
   @Output() save = new EventEmitter<ProductRequest>();
   @Output() close = new EventEmitter<void>();
 
