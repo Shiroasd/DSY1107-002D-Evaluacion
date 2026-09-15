@@ -134,39 +134,13 @@ export class MsalInterceptor implements HttpInterceptor {
 
 /**
  * Inicializador de MSAL para Angular Standalone:
- * Ejecuta initialize() y procesa handleRedirectObservable() ANTES de que el Router
- * de Angular inicie la navegación y limpie el hash de autenticación (#code=...) de la URL.
+ * Ejecuta msalService.initialize() durante el arranque de la aplicación (APP_INITIALIZER),
+ * garantizando que la instancia de MSAL Browser esté completamente inicializada antes de
+ * cualquier llamada a loginRedirect(), loginPopup() o activación de guards de rutas.
  */
-export function MSALInitializerFactory(msalService: MsalService, authService: AuthService) {
+export function MSALInitializerFactory(msalService: MsalService) {
   return () => {
-    const responseString = typeof window !== 'undefined'
-      ? (window.location.hash || window.location.search || undefined)
-      : undefined;
-    return msalService.initialize().pipe(
-      concatMap(() => msalService.handleRedirectObservable(responseString)),
-      tap((result) => {
-        if (result) {
-          console.info('[MSALInitializer] Autenticación completada exitosamente:', result.account?.username);
-          const token = result.idToken || result.accessToken;
-          if (token) {
-            authService.setToken(token);
-          }
-          if (result.account) {
-            msalService.instance.setActiveAccount(result.account);
-          }
-        } else {
-          const accounts = msalService.instance.getAllAccounts();
-          if (accounts && accounts.length > 0) {
-            msalService.instance.setActiveAccount(accounts[0]);
-          }
-        }
-        authService.updateUserState();
-      }),
-      catchError((err) => {
-        console.error('[MSALInitializer] Error o nota en procesamiento de redirección:', err);
-        return of(null);
-      })
-    );
+    return msalService.initialize();
   };
 }
 
@@ -194,7 +168,7 @@ export const appConfig: ApplicationConfig = {
     {
       provide: APP_INITIALIZER,
       useFactory: MSALInitializerFactory,
-      deps: [MsalService, AuthService],
+      deps: [MsalService],
       multi: true
     },
     MsalService,

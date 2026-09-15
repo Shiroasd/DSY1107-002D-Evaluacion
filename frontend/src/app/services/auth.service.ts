@@ -180,8 +180,9 @@ export class AuthService {
    *    para garantizar compatibilidad total con cuentas institucionales / académicas.
    */
   public login(): void {
-    // 1. Limpiar posibles bloqueos residuales de interacción en sessionStorage y localStorage
+    console.log('Iniciando flujo de login...');
     try {
+      // 1. Limpiar posibles bloqueos residuales de interacción en sessionStorage y localStorage
       [sessionStorage, localStorage].forEach(storage => {
         Object.keys(storage).forEach(key => {
           if (key.startsWith('msal.') && (key.includes('interaction') || key.includes('request'))) {
@@ -189,21 +190,22 @@ export class AuthService {
           }
         });
       });
-    } catch (e) {
-      console.warn('[AuthService] Limpieza de sesión preventiva:', e);
+
+      const authRequest = {
+        scopes: ['openid', 'profile', 'email'],
+        prompt: 'select_account'
+      };
+
+      console.info('[AuthService] Redirigiendo a Microsoft Entra ID para inicio de sesión...');
+      this.msalService.loginRedirect(authRequest).subscribe({
+        next: () => console.log('[AuthService] loginRedirect ejecutado con éxito.'),
+        error: (redirectError) => {
+          console.error('[AuthService] Error al iniciar loginRedirect:', redirectError);
+        }
+      });
+    } catch (error) {
+      console.error('[AuthService] Excepción al ejecutar login:', error);
     }
-
-    const authRequest = {
-      scopes: ['openid', 'profile', 'email'],
-      prompt: 'select_account'
-    };
-
-    console.info('[AuthService] Redirigiendo a Microsoft Entra ID para inicio de sesión...');
-    this.msalService.loginRedirect(authRequest).subscribe({
-      error: (redirectError) => {
-        console.error('[AuthService] Error al iniciar loginRedirect:', redirectError);
-      }
-    });
   }
 
   /**
