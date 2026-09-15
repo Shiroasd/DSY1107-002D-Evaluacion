@@ -48,7 +48,7 @@ public class CategoryController {
      * Crear una nueva categoría. Protegido: Requiere rol 'Admin' o permiso/scope delegado (ej. 'OT.Create').
      */
     @PostMapping
-    @PreAuthorize("hasRole('Admin') or hasAuthority('SCOPE_OT.Create') or hasAuthority('OT.Create')")
+    @PreAuthorize("hasAnyRole('Admin', 'ADMIN') or hasAuthority('SCOPE_OT.Create') or hasAuthority('OT.Create')")
     public ResponseEntity<CategoryResponseDto> createCategory(@Valid @RequestBody CategoryRequestDto requestDto) {
         CategoryResponseDto created = categoryService.createCategory(requestDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -58,7 +58,7 @@ public class CategoryController {
      * Actualizar categoría existente. Protegido: Requiere rol 'Admin' o permiso/scope delegado.
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('Admin') or hasAuthority('SCOPE_OT.Create') or hasAuthority('OT.Create') or hasAuthority('SCOPE_OT.Update') or hasAuthority('OT.Update')")
+    @PreAuthorize("hasAnyRole('Admin', 'ADMIN') or hasAuthority('SCOPE_OT.Create') or hasAuthority('OT.Create') or hasAuthority('SCOPE_OT.Update') or hasAuthority('OT.Update')")
     public ResponseEntity<CategoryResponseDto> updateCategory(
             @PathVariable Long id,
             @Valid @RequestBody CategoryRequestDto requestDto) {
@@ -69,7 +69,7 @@ public class CategoryController {
      * Eliminar categoría. Protegido: Requiere rol 'Admin' o permiso/scope delegado.
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('Admin') or hasAuthority('SCOPE_OT.Delete') or hasAuthority('OT.Delete')")
+    @PreAuthorize("hasAnyRole('Admin', 'ADMIN') or hasAuthority('SCOPE_OT.Delete') or hasAuthority('OT.Delete')")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
         categoryService.deleteCategory(id);
         return ResponseEntity.noContent().build();

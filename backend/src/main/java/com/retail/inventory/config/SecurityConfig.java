@@ -71,14 +71,14 @@ public class SecurityConfig {
                 // Peticiones Preflight de CORS siempre permitidas
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // Endpoints GET accesibles para cualquier usuario autenticado
-                .requestMatchers(HttpMethod.GET, "/api/v1/products/**", "/api/v1/categories/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/v1/products", "/api/v1/products/**", "/api/v1/categories", "/api/v1/categories/**").authenticated()
                 // Endpoints de creación y modificación: Validan rol Admin o permisos/scopes delegados (ej. OT.Create)
-                .requestMatchers(HttpMethod.POST, "/api/v1/products/**", "/api/v1/categories/**")
-                    .hasAnyAuthority("ROLE_Admin", "SCOPE_OT.Create", "OT.Create")
-                .requestMatchers(HttpMethod.PUT, "/api/v1/products/**", "/api/v1/categories/**")
-                    .hasAnyAuthority("ROLE_Admin", "SCOPE_OT.Create", "OT.Create", "SCOPE_OT.Update", "OT.Update")
-                .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**", "/api/v1/categories/**")
-                    .hasAnyAuthority("ROLE_Admin", "SCOPE_OT.Delete", "OT.Delete")
+                .requestMatchers(HttpMethod.POST, "/api/v1/products", "/api/v1/products/**", "/api/v1/categories", "/api/v1/categories/**")
+                    .hasAnyAuthority("ROLE_Admin", "ROLE_ADMIN", "SCOPE_OT.Create", "OT.Create")
+                .requestMatchers(HttpMethod.PUT, "/api/v1/products", "/api/v1/products/**", "/api/v1/categories", "/api/v1/categories/**")
+                    .hasAnyAuthority("ROLE_Admin", "ROLE_ADMIN", "SCOPE_OT.Create", "OT.Create", "SCOPE_OT.Update", "OT.Update")
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/products", "/api/v1/products/**", "/api/v1/categories", "/api/v1/categories/**")
+                    .hasAnyAuthority("ROLE_Admin", "ROLE_ADMIN", "SCOPE_OT.Delete", "OT.Delete")
                 // Cualquier otra solicitud requiere autenticación
                 .anyRequest().authenticated()
             )

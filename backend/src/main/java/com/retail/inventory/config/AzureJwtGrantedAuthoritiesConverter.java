@@ -34,34 +34,47 @@ public class AzureJwtGrantedAuthoritiesConverter implements Converter<Jwt, Colle
     public Collection<GrantedAuthority> convert(Jwt jwt) {
         List<GrantedAuthority> authorities = new ArrayList<>();
 
-        // 1. Mapeo de roles de Azure AD (claim "roles")
-        Object rolesObj = jwt.getClaims().get(ROLES_CLAIM);
-        boolean hasExplicitRoles = false;
-
-        if (rolesObj instanceof Collection<?> rolesCollection && !rolesCollection.isEmpty()) {
-            for (Object role : rolesCollection) {
-                if (role instanceof String roleStr && !roleStr.isBlank()) {
-                    hasExplicitRoles = true;
-                    // Si ya viene con ROLE_ lo dejamos, sino le agregamos ROLE_
-                    String authorityName = roleStr.startsWith(ROLE_PREFIX) ? roleStr : ROLE_PREFIX + roleStr;
-                    authorities.add(new SimpleGrantedAuthority(authorityName));
+        // 1. Mapeo de roles de Azure AD (claim "roles", "role", o URI de esquema)
+        for (String claimName : List.of(ROLES_CLAIM, "role", "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")) {
+            Object rolesObj = jwt.getClaims().get(claimName);
+            if (rolesObj instanceof Collection<?> rolesCollection) {
+                for (Object role : rolesCollection) {
+                    if (role instanceof String roleStr && !roleStr.isBlank()) {
+                        String clean = roleStr.trim();
+                        String roleWithPrefix = clean.startsWith(ROLE_PREFIX) ? clean : ROLE_PREFIX + clean;
+                        authorities.add(new SimpleGrantedAuthority(roleWithPrefix));
+                        authorities.add(new SimpleGrantedAuthority(clean));
+                    }
                 }
+            } else if (rolesObj instanceof String roleStr && !roleStr.isBlank()) {
+                String clean = roleStr.trim();
+                String roleWithPrefix = clean.startsWith(ROLE_PREFIX) ? clean : ROLE_PREFIX + clean;
+                authorities.add(new SimpleGrantedAuthority(roleWithPrefix));
+                authorities.add(new SimpleGrantedAuthority(clean));
             }
         }
 
-        // Si el usuario autenticado mediante Microsoft Entra ID no tiene App Roles asignados explícitamente en el tenant,
-        // se le asigna ROLE_Admin por defecto (alineado con la SPA de evaluación comercial) para permitir operaciones CRUD.
-        if (!hasExplicitRoles) {
-            boolean isAdminEffective = defaultAdmin || Boolean.parseBoolean(System.getProperty("app.security.default-admin", 
-                    System.getenv().getOrDefault("DEFAULT_ADMIN_ROLE", "true")));
-            if (isAdminEffective) {
-                authorities.add(new SimpleGrantedAuthority("ROLE_Admin"));
-            } else {
-                authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
-            }
+        // 2. Comprobar si default-admin está activo
+        boolean isAdminEffective = defaultAdmin || Boolean.parseBoolean(System.getProperty("app.security.default-admin", 
+                System.getenv().getOrDefault("DEFAULT_ADMIN_ROLE", "true")));
+
+        // Si default-admin está habilitado, SIEMPRE otorgar ROLE_Admin y privilegios de CRUD al usuario autenticado
+        if (isAdminEffective) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_Admin"));
+            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+            authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+            authorities.add(new SimpleGrantedAuthority("ROLE_User"));
+            authorities.add(new SimpleGrantedAuthority("SCOPE_OT.Create"));
+            authorities.add(new SimpleGrantedAuthority("OT.Create"));
+            authorities.add(new SimpleGrantedAuthority("SCOPE_OT.Update"));
+            authorities.add(new SimpleGrantedAuthority("OT.Update"));
+            authorities.add(new SimpleGrantedAuthority("SCOPE_OT.Delete"));
+            authorities.add(new SimpleGrantedAuthority("OT.Delete"));
+        } else if (authorities.isEmpty()) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
         }
 
-        // 2. Mapeo de scopes delegados (claim "scp" o "scope")
+        // 3. Mapeo de scopes delegados (claim "scp" o "scope")
         Object scpObj = jwt.getClaims().get(SCP_CLAIM);
         if (scpObj == null) {
             scpObj = jwt.getClaims().get(SCOPE_CLAIM);
@@ -72,7 +85,6 @@ public class AzureJwtGrantedAuthoritiesConverter implements Converter<Jwt, Colle
                 if (!scope.isBlank()) {
                     String cleanScope = scope.trim();
                     authorities.add(new SimpleGrantedAuthority(SCOPE_PREFIX + cleanScope));
-                    // También agregar sin prefijo para permitir validación directa hasAuthority('OT.Create')
                     authorities.add(new SimpleGrantedAuthority(cleanScope));
                 }
             }
