@@ -98,7 +98,7 @@ export const environment = {
   production: false,
   msalConfig: {
     auth: {
-      clientId: '57c1db2d-484b-463a-b993-45c3ef349e3c',       // ID de la aplicación en Azure AD
+      clientId: '61d2f1d7-99e9-4cf7-83fc-51456a9eb5b6',       // ID de la aplicación en Azure AD
       authority: 'https://login.microsoftonline.com/<TENANT_ID>', // Tenant de Microsoft Entra
       redirectUri: 'http://localhost:4200'                      // URL de redirección post-login
     }

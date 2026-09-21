@@ -120,14 +120,14 @@ Los identificadores ya se encuentran configurados en el código con los valores 
 | **Backend App Client ID** | `afcd0a4e-f3f3-4934-9861-4d8d13cecc30` |
 | **Backend App ID URI** | `api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30` |
 | **Backend Delegated Scope** | `api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30/user_impersonation` |
-| **Frontend App Client ID** | `57c1db2d-484b-463a-b993-45c3ef349e3c` |
+| **Frontend App Client ID** | `61d2f1d7-99e9-4cf7-83fc-51456a9eb5b6` |
 | **Frontend Redirect URI** | `http://localhost:4200` |
 
 ### Pasos en el Portal de Azure (si se desea administrar usuarios/roles):
 1. **App Registration del Backend (`afcd0a4e-f3f3-4934-9861-4d8d13cecc30`)**:
    - En **Expose an API**, asegúrate de tener configurado el scope `user_impersonation`.
    - En **App roles**, crea un rol con valor exacto `Admin` (Allowed member types: *Users/Groups*).
-2. **App Registration del Frontend (`57c1db2d-484b-463a-b993-45c3ef349e3c`)**:
+2. **App Registration del Frontend (`61d2f1d7-99e9-4cf7-83fc-51456a9eb5b6`)**:
    - En **Authentication**, agrega plataforma **Single-page application (SPA)** con Redirect URI: `http://localhost:4200`.
    - En **API permissions**, agrega el permiso delegado `user_impersonation` de la API del Backend.
 3. **Asignación de Roles**:
