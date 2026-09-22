@@ -1,0 +1,307 @@
+{
+	"info": {
+		"_postman_id": "c7a8b910-1234-5678-9abc-def012345678",
+		"name": "Retail Inventory API - Azure AD & Cloud Native",
+		"description": "Colección completa de pruebas para la API de Gestión de Inventario protegida por Microsoft Entra ID (Azure AD).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{BEARER_TOKEN}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "BASE_URL",
+			"value": "https://6c8d0lm8pi.execute-api.us-east-1.amazonaws.com/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "DIRECT_AWS_URL",
+			"value": "https://32.193.45.223/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "BEARER_TOKEN",
+			"value": "PEGA_AQUI_TU_TOKEN_JWT",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Categorías",
+			"item": [
+				{
+					"name": "Listar Categorías (GET 200 OK)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/categories",
+							"host": ["{{BASE_URL}}"],
+							"path": ["categories"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Categoría por ID (GET 200 OK)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/categories/1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["categories", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Categoría (POST 201 Created)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Iluminación y Energía\",\n  \"description\": \"Generadores de emergencia, paneles solares portátiles y linternas de alta potencia\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/categories",
+							"host": ["{{BASE_URL}}"],
+							"path": ["categories"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Categoría (PUT 200 OK)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Puntos de Venta (POS) y Cajas\",\n  \"description\": \"Terminales táctiles actualizadas, escáneres láser e impresoras térmicas\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/categories/1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["categories", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Categoría (DELETE 204 No Content)",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/categories/10",
+							"host": ["{{BASE_URL}}"],
+							"path": ["categories", "10"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Productos",
+			"item": [
+				{
+					"name": "Listar Todos los Productos (GET 200 OK)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/products",
+							"host": ["{{BASE_URL}}"],
+							"path": ["products"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Filtrar Productos por Categoría (GET 200 OK)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/products?categoryId=1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["products"],
+							"query": [
+								{
+									"key": "categoryId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Productos por Texto (GET 200 OK)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/products?search=POS",
+							"host": ["{{BASE_URL}}"],
+							"path": ["products"],
+							"query": [
+								{
+									"key": "search",
+									"value": "POS"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Producto por ID (GET 200 OK)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/products/1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["products", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Producto (POST 201 Created)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"POS-NEW-99\",\n  \"name\": \"Terminal POS Inteligente Android 12\",\n  \"description\": \"Terminal portátil inalámbrico con impresora térmica integrada de 58mm y conectividad 4G/Wi-Fi\",\n  \"price\": 189990.00,\n  \"stock\": 15,\n  \"categoryId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/products",
+							"host": ["{{BASE_URL}}"],
+							"path": ["products"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Producto (PUT 200 OK)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"POS-1001\",\n  \"name\": \"Terminal Táctil All-in-One 15.6\\\" Pro\",\n  \"description\": \"Pantalla táctil capacitiva True-Flat, Intel Celeron J4125 16GB RAM, SSD 256GB, base de aluminio reforzado\",\n  \"price\": 499990.00,\n  \"stock\": 20,\n  \"categoryId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/products/1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["products", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Producto (DELETE 204 No Content)",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/products/29",
+							"host": ["{{BASE_URL}}"],
+							"path": ["products", "29"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Pruebas de Validación y Seguridad (Errores)",
+			"item": [
+				{
+					"name": "Error 401 Unauthorized (Sin Token)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/products",
+							"host": ["{{BASE_URL}}"],
+							"path": ["products"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Error 400 Bad Request (Validación DTO)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"\",\n  \"name\": \"\",\n  \"price\": -500,\n  \"stock\": -2,\n  \"categoryId\": null\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/products",
+							"host": ["{{BASE_URL}}"],
+							"path": ["products"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Error 404 Not Found (ID Inexistente)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/products/99999",
+							"host": ["{{BASE_URL}}"],
+							"path": ["products", "99999"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

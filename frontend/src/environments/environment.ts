@@ -12,13 +12,12 @@ export const environment = {
     }
   },
   apiConfig: {
-    baseUrl: '/api/v1',
+    baseUrl: 'https://6c8d0lm8pi.execute-api.us-east-1.amazonaws.com/api/v1',
     scope: 'api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30/user_impersonation',
-    protectedResourceScopes: ['User.Read'],
+    protectedResourceScopes: ['User.Read', 'api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30/user_impersonation'],
     protectedResourceMap: new Map<string, Array<string>>([
-      ['/api/v1', ['User.Read']],
-      ['https://32.193.45.223/api/v1', ['User.Read']],
-      ['http://32.192.168.114:8081/api/v1', ['User.Read']]
+      ['https://6c8d0lm8pi.execute-api.us-east-1.amazonaws.com/api/v1/*', ['api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30/user_impersonation']],
+      ['https://6c8d0lm8pi.execute-api.us-east-1.amazonaws.com/api/v1', ['api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30/user_impersonation']]
     ])
   }
 };
