@@ -14,7 +14,7 @@ Hemos creado el archivo listo para importar en Postman:
 2. Haz clic en el botón superior **Import**.
 3. Arrastra y suelta el archivo `Retail_Inventory_API.postman_collection.json`.
 4. En las variables de la colección encontrarás:
-   - `BASE_URL`: `https://6c8d0lm8pi.execute-api.us-east-1.amazonaws.com/api/v1` (o la IP directa `https://32.193.45.223/api/v1` / local `http://localhost:8080/api/v1`).
+   - `BASE_URL`: `https://32.193.45.223/api/v1` (o local `http://localhost:8080/api/v1`).
    - `BEARER_TOKEN`: El token JWT obtenido en el paso siguiente.
 
 ---

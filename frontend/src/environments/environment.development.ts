@@ -12,14 +12,17 @@ export const environment = {
     }
   },
   apiConfig: {
-    baseUrl: 'http://32.192.168.114:8081/api/v1',
+    baseUrl: 'https://32.193.45.223/api/v1',
     scope: 'api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30/user_impersonation',
     protectedResourceScopes: [
-      'User.Read'
+      'User.Read',
+      'api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30/user_impersonation'
     ],
     protectedResourceMap: new Map<string, Array<string>>([
-      ['http://32.192.168.114:8081/api/v1/*', ['User.Read']],
-      ['http://localhost:8081/api/v1/*', ['User.Read']]
+      ['https://32.193.45.223/api/v1/*', ['api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30/user_impersonation']],
+      ['https://32.193.45.223/api/v1', ['api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30/user_impersonation']],
+      ['http://localhost:8080/api/v1/*', ['api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30/user_impersonation']],
+      ['http://localhost:8081/api/v1/*', ['api://afcd0a4e-f3f3-4934-9861-4d8d13cecc30/user_impersonation']]
     ])
   }
 };

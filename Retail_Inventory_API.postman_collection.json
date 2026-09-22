@@ -18,7 +18,7 @@
 	"variable": [
 		{
 			"key": "BASE_URL",
-			"value": "https://6c8d0lm8pi.execute-api.us-east-1.amazonaws.com/api/v1",
+			"value": "https://32.193.45.223/api/v1",
 			"type": "string"
 		},
 		{
