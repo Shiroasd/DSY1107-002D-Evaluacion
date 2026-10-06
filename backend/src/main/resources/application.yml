@@ -7,6 +7,13 @@ spring:
   application:
     name: inventory-backend
 
+  # Configuración de RabbitMQ
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+  
   # Configuración exacta de Microsoft Entra ID (Azure Active Directory / Resource Server)
   cloud:
     azure:
@@ -32,7 +39,7 @@ spring:
             - 57c1db2d-484b-463a-b993-45c3ef349e3c
             - 61d2f1d7-99e9-4cf7-83fc-51456a9eb5b6
 
-  # Configuración de Persistencia (H2 para desarrollo/test local, AWS RDS / PostgreSQL para Cloud)
+  # Configuración de Persistencia (H2 para desarrollo/test local)
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:inventorydb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.h2.Driver}
@@ -70,7 +77,7 @@ logging:
     com.azure.spring.cloud.autoconfigure.implementation.aad: INFO
     com.retail.inventory: DEBUG
 
-# Configuración de CORS para el Frontend Angular migrado a AWS
+# Configuración de CORS para el Frontend Angular
 app:
   security:
     default-admin: true
@@ -99,4 +106,3 @@ app:
     exposed-headers:
       - "Authorization"
       - "Location"
-
