@@ -157,6 +157,82 @@ El backend está protegido con **OAuth 2.0 / JWT**. La forma más rápida y conf
 
 ---
 
+### C. Módulo Administrador de RabbitMQ (`/api/v1/admin/rabbitmq`)
+*(Requiere obligatoriamente Token Bearer con rol `Admin`)*
+
+#### 1. Crear Cola Dinámica con Dead Letter Exchange (DLX)
+* **Método:** `POST`
+* **URL:** `{{BASE_URL}}/admin/rabbitmq/queues`
+* **Headers:** `Content-Type: application/json`
+* **Body (raw JSON):**
+  ```json
+  {
+    "name": "inventario.pedidos.queue",
+    "durable": true,
+    "exclusive": false,
+    "autoDelete": false,
+    "deadLetterExchange": "inventario.dlx.exchange",
+    "deadLetterRoutingKey": "inventario.pedidos.dlq.rk"
+  }
+  ```
+* **Código Esperado:** `201 Created`
+* **Respuesta:**
+  ```json
+  {
+    "status": "SUCCESS",
+    "message": "Cola declarada exitosamente en RabbitMQ",
+    "queueName": "inventario.pedidos.queue",
+    "durable": true,
+    "exclusive": false,
+    "autoDelete": false,
+    "deadLetterExchange": "inventario.dlx.exchange",
+    "deadLetterRoutingKey": "inventario.pedidos.dlq.rk",
+    "timestamp": "2026-10-15T18:40:00.000"
+  }
+  ```
+
+#### 2. Eliminar Cola Dinámica
+* **Método:** `DELETE`
+* **URL:** `{{BASE_URL}}/admin/rabbitmq/queues/inventario.pedidos.queue`
+* **Código Esperado:** `200 OK`
+
+#### 3. Crear Exchange Dinámico
+* **Método:** `POST`
+* **URL:** `{{BASE_URL}}/admin/rabbitmq/exchanges`
+* **Headers:** `Content-Type: application/json`
+* **Body (raw JSON):**
+  ```json
+  {
+    "name": "inventario.pedidos.exchange",
+    "type": "TOPIC",
+    "durable": true,
+    "autoDelete": false
+  }
+  ```
+* **Código Esperado:** `201 Created`
+
+#### 4. Eliminar Exchange Dinámico
+* **Método:** `DELETE`
+* **URL:** `{{BASE_URL}}/admin/rabbitmq/exchanges/inventario.pedidos.exchange`
+* **Código Esperado:** `200 OK`
+
+#### 5. Declarar Binding Dinámico
+* **Método:** `POST`
+* **URL:** `{{BASE_URL}}/admin/rabbitmq/bindings`
+* **Headers:** `Content-Type: application/json`
+* **Body (raw JSON):**
+  ```json
+  {
+    "destination": "inventario.pedidos.queue",
+    "destinationType": "QUEUE",
+    "exchange": "inventario.pedidos.exchange",
+    "routingKey": "pedidos.#"
+  }
+  ```
+* **Código Esperado:** `201 Created`
+
+---
+
 ## 🛡️ 3. Códigos de Estado HTTP para la Presentación (Respuestas de la API)
 
 Para tu presentación, los evaluadores suelen exigir demostrar tanto el **camino feliz (Happy Path)** como el **manejo de excepciones y seguridad**:

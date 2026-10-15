@@ -5,16 +5,12 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
 public class ProductRequestDto {
 
@@ -39,4 +35,16 @@ public class ProductRequestDto {
 
     @NotNull(message = "El ID de la categoría es obligatorio")
     private Long categoryId;
+
+    public ProductRequestDto() {
+    }
+
+    public ProductRequestDto(String sku, String name, String description, BigDecimal price, Integer stock, Long categoryId) {
+        this.sku = sku;
+        this.name = name;
+        this.description = description;
+        this.price = price;
+        this.stock = stock;
+        this.categoryId = categoryId;
+    }
 }

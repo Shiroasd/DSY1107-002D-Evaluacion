@@ -2,14 +2,10 @@ package com.retail.inventory.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
 public class CategoryRequestDto {
 
@@ -19,4 +15,12 @@ public class CategoryRequestDto {
 
     @Size(max = 255, message = "La descripción no puede superar los 255 caracteres")
     private String description;
+
+    public CategoryRequestDto() {
+    }
+
+    public CategoryRequestDto(String name, String description) {
+        this.name = name;
+        this.description = description;
+    }
 }

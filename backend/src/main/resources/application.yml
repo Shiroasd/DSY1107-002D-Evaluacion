@@ -9,10 +9,13 @@ spring:
 
   # Configuración de RabbitMQ
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        acknowledge-mode: manual
   
   # Configuración exacta de Microsoft Entra ID (Azure Active Directory / Resource Server)
   cloud:
@@ -81,6 +84,19 @@ logging:
 app:
   security:
     default-admin: true
+  rabbitmq:
+    exchange: ${RABBITMQ_EXCHANGE:inventario.exchange}
+    dlx-exchange: ${RABBITMQ_DLX_EXCHANGE:inventario.dlx.exchange}
+    queues:
+      auditoria: ${RABBITMQ_QUEUE_AUDITORIA:inventario.auditoria.queue}
+      auditoria-dlq: ${RABBITMQ_QUEUE_AUDITORIA_DLQ:inventario.auditoria.dlq}
+      notificaciones: ${RABBITMQ_QUEUE_NOTIFICACIONES:inventario.notificaciones.queue}
+      notificaciones-dlq: ${RABBITMQ_QUEUE_NOTIFICACIONES_DLQ:inventario.notificaciones.dlq}
+    routing-keys:
+      stock-modificado: ${RABBITMQ_RK_STOCK_MODIFICADO:inventario.stock.modificado}
+      auditoria-all: ${RABBITMQ_RK_AUDITORIA_ALL:inventario.#}
+      dlq-auditoria: ${RABBITMQ_RK_DLQ_AUDITORIA:dlq.auditoria}
+      dlq-notificaciones: ${RABBITMQ_RK_DLQ_NOTIFICACIONES:dlq.notificaciones}
   cors:
     allowed-origins:
       - "https://32.193.45.223"

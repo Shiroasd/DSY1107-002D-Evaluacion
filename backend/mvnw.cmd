@@ -6,6 +6,12 @@
 
 SET ERROR_CODE=0
 
+IF "%JAVA_HOME%" == "" (
+  IF EXIST "C:\Program Files\Java\jdk-21.0.11" (
+    SET "JAVA_HOME=C:\Program Files\Java\jdk-21.0.11"
+  )
+)
+
 IF NOT "%JAVA_HOME%" == "" (
   SET "JAVA_EXE=%JAVA_HOME%\bin\java.exe"
 ) ELSE (

@@ -1,6 +1,5 @@
 package com.retail.inventory.service.impl;
 
-import com.retail.inventory.config.RabbitMQConfig;
 import com.retail.inventory.domain.Category;
 import com.retail.inventory.domain.Product;
 import com.retail.inventory.dto.ProductRequestDto;
@@ -10,9 +9,10 @@ import com.retail.inventory.exception.BadRequestException;
 import com.retail.inventory.exception.ResourceNotFoundException;
 import com.retail.inventory.repository.CategoryRepository;
 import com.retail.inventory.repository.ProductRepository;
+import com.retail.inventory.service.InventoryEventPublisher;
 import com.retail.inventory.service.ProductService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,12 +21,21 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
+@Slf4j
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
-    private final RabbitTemplate rabbitTemplate; // <-- Dependencia de RabbitMQ inyectada por Lombok
+    private final InventoryEventPublisher eventPublisher;
+
+    @Autowired
+    public ProductServiceImpl(ProductRepository productRepository,
+                              CategoryRepository categoryRepository,
+                              InventoryEventPublisher eventPublisher) {
+        this.productRepository = productRepository;
+        this.categoryRepository = categoryRepository;
+        this.eventPublisher = eventPublisher;
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -117,9 +126,9 @@ public class ProductServiceImpl implements ProductService {
 
         // 1. Comunicación Síncrona: Se guarda en la base de datos de inmediato
         Product updated = productRepository.save(product);
-        System.out.println("[SÍNCRONO] Producto actualizado exitosamente en BD. ID: " + updated.getId());
+        log.info("[SÍNCRONO] Producto actualizado exitosamente en BD. ID: {}", updated.getId());
 
-        // 2. Comunicación Asíncrona: Disparamos el evento a RabbitMQ
+        // 2. Comunicación Asíncrona: Disparamos el evento a través del puerto desacoplado
         if (stockAnterior != updated.getStock()) {
             StockModificadoEvent evento = new StockModificadoEvent();
             evento.setProductId(updated.getId());
@@ -131,8 +140,7 @@ public class ProductServiceImpl implements ProductService {
             evento.setFechaMovimiento(LocalDateTime.now().toString());
             evento.setUsuarioResponsable("admin@tiendaperrito.cl"); // Simulado para la evaluación
 
-            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, "inventario.stock.modificado", evento);
-            System.out.println("[ASÍNCRONO] Evento de stock modificado enviado a RabbitMQ (Routing Key: inventario.stock.modificado)");
+            eventPublisher.publishStockModificado(evento);
         }
 
         return mapToResponse(updated);

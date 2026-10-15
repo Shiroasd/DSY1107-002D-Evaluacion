@@ -302,6 +302,103 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "4. RabbitMQ Admin (Solo Admin)",
+			"item": [
+				{
+					"name": "Crear Cola Dinámica (POST 201 Created)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"inventario.pedidos.queue\",\n  \"durable\": true,\n  \"exclusive\": false,\n  \"autoDelete\": false,\n  \"deadLetterExchange\": \"inventario.dlx.exchange\",\n  \"deadLetterRoutingKey\": \"inventario.pedidos.dlq.rk\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/admin/rabbitmq/queues",
+							"host": ["{{BASE_URL}}"],
+							"path": ["admin", "rabbitmq", "queues"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Cola Dinámica (DELETE 200 OK)",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/admin/rabbitmq/queues/inventario.pedidos.queue",
+							"host": ["{{BASE_URL}}"],
+							"path": ["admin", "rabbitmq", "queues", "inventario.pedidos.queue"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Exchange Dinámico (POST 201 Created)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"inventario.pedidos.exchange\",\n  \"type\": \"TOPIC\",\n  \"durable\": true,\n  \"autoDelete\": false\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/admin/rabbitmq/exchanges",
+							"host": ["{{BASE_URL}}"],
+							"path": ["admin", "rabbitmq", "exchanges"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Exchange Dinámico (DELETE 200 OK)",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/admin/rabbitmq/exchanges/inventario.pedidos.exchange",
+							"host": ["{{BASE_URL}}"],
+							"path": ["admin", "rabbitmq", "exchanges", "inventario.pedidos.exchange"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Binding Dinámico (POST 201 Created)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"destination\": \"inventario.pedidos.queue\",\n  \"destinationType\": \"QUEUE\",\n  \"exchange\": \"inventario.pedidos.exchange\",\n  \"routingKey\": \"pedidos.#\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/admin/rabbitmq/bindings",
+							"host": ["{{BASE_URL}}"],
+							"path": ["admin", "rabbitmq", "bindings"]
+						}
+					},
+					"response": []
+				}
+			]
 		}
 	]
 }
