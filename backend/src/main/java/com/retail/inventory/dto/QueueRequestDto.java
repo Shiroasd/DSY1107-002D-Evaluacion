@@ -2,6 +2,7 @@ package com.retail.inventory.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Data;
 
@@ -15,6 +16,7 @@ import java.util.Map;
 public class QueueRequestDto {
 
     @NotBlank(message = "El nombre de la cola es obligatorio")
+    @Size(max = 255, message = "El nombre de la cola no puede superar 255 caracteres")
     @Pattern(regexp = "^[a-zA-Z0-9._-]+$", message = "El nombre de la cola solo puede contener caracteres alfanuméricos, puntos, guiones y guiones bajos")
     private String name;
 
@@ -27,8 +29,10 @@ public class QueueRequestDto {
     @Builder.Default
     private boolean autoDelete = false;
 
+    @Pattern(regexp = "^[a-zA-Z0-9._-]*$", message = "El dead letter exchange solo puede contener caracteres alfanuméricos, puntos, guiones y guiones bajos")
     private String deadLetterExchange;
 
+    @Pattern(regexp = "^[a-zA-Z0-9._#*-]*$", message = "La routing key de dead letter contiene caracteres inválidos")
     private String deadLetterRoutingKey;
 
     private Map<String, Object> arguments;

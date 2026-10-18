@@ -4,7 +4,7 @@ import com.retail.inventory.dto.CategoryRequestDto;
 import com.retail.inventory.dto.CategoryResponseDto;
 import com.retail.inventory.service.CategoryService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,14 +21,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/categories")
+@RequiredArgsConstructor
 public class CategoryController {
 
     private final CategoryService categoryService;
-
-    @Autowired
-    public CategoryController(CategoryService categoryService) {
-        this.categoryService = categoryService;
-    }
 
     /**
      * Obtener todas las categorías. Accesible para cualquier usuario autenticado.

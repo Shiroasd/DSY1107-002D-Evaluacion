@@ -36,4 +36,9 @@ public interface RabbitAdminService {
      * Crea un enlace (Binding) entre una cola/exchange y un exchange de origen con una routing key.
      */
     Map<String, Object> createBinding(BindingRequestDto requestDto);
+
+    /**
+     * Elimina un enlace (Binding) existente.
+     */
+    Map<String, Object> deleteBinding(BindingRequestDto requestDto);
 }

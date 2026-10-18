@@ -8,7 +8,7 @@ import com.retail.inventory.exception.ResourceNotFoundException;
 import com.retail.inventory.repository.CategoryRepository;
 import com.retail.inventory.repository.ProductRepository;
 import com.retail.inventory.service.CategoryService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,16 +16,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
-
-    @Autowired
-    public CategoryServiceImpl(CategoryRepository categoryRepository, ProductRepository productRepository) {
-        this.categoryRepository = categoryRepository;
-        this.productRepository = productRepository;
-    }
 
     @Override
     @Transactional(readOnly = true)

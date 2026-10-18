@@ -2,6 +2,7 @@ package com.retail.inventory.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Data;
 
@@ -28,6 +29,8 @@ public class BindingRequestDto {
     private String exchange;
 
     @NotBlank(message = "La clave de enrutamiento (routingKey) es obligatoria")
+    @Size(max = 255, message = "La routing key no puede superar 255 caracteres")
+    @Pattern(regexp = "^[a-zA-Z0-9._#*-]+$", message = "La routing key solo puede contener alfanuméricos, puntos, guiones, '*' y '#'")
     private String routingKey;
 
     private Map<String, Object> arguments;

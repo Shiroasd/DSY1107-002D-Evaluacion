@@ -92,11 +92,16 @@ app:
       auditoria-dlq: ${RABBITMQ_QUEUE_AUDITORIA_DLQ:inventario.auditoria.dlq}
       notificaciones: ${RABBITMQ_QUEUE_NOTIFICACIONES:inventario.notificaciones.queue}
       notificaciones-dlq: ${RABBITMQ_QUEUE_NOTIFICACIONES_DLQ:inventario.notificaciones.dlq}
+      reposicion: ${RABBITMQ_QUEUE_REPOSICION:inventario.reposicion.queue}
+      reposicion-dlq: ${RABBITMQ_QUEUE_REPOSICION_DLQ:inventario.reposicion.dlq}
     routing-keys:
       stock-modificado: ${RABBITMQ_RK_STOCK_MODIFICADO:inventario.stock.modificado}
       auditoria-all: ${RABBITMQ_RK_AUDITORIA_ALL:inventario.#}
       dlq-auditoria: ${RABBITMQ_RK_DLQ_AUDITORIA:dlq.auditoria}
       dlq-notificaciones: ${RABBITMQ_RK_DLQ_NOTIFICACIONES:dlq.notificaciones}
+      stock-critico: ${RABBITMQ_RK_STOCK_CRITICO:reposicion.stock.critico}
+      dlq-reposicion: ${RABBITMQ_RK_DLQ_REPOSICION:dlq.reposicion}
+    stock-critico-umbral: ${RABBITMQ_STOCK_CRITICO_UMBRAL:3}
   cors:
     allowed-origins:
       - "https://32.193.45.223"

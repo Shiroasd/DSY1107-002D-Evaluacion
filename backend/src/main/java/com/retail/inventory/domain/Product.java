@@ -9,8 +9,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
@@ -19,6 +21,8 @@ import java.math.BigDecimal;
 @Table(name = "products")
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class Product {
 
@@ -44,17 +48,4 @@ public class Product {
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
-
-    public Product() {
-    }
-
-    public Product(Long id, String sku, String name, String description, BigDecimal price, Integer stock, Category category) {
-        this.id = id;
-        this.sku = sku;
-        this.name = name;
-        this.description = description;
-        this.price = price;
-        this.stock = stock;
-        this.category = category;
-    }
 }

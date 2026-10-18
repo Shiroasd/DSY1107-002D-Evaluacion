@@ -71,6 +71,16 @@ public class RabbitAdminController {
     @PostMapping("/bindings")
     public ResponseEntity<Map<String, Object>> createBinding(@Valid @RequestBody BindingRequestDto requestDto) {
         Map<String, Object> result = rabbitAdminService.createBinding(requestDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(result);
+    }
+
+    /**
+     * Elimina un Binding. Los datos se envían como parámetros de query:
+     * DELETE /bindings?destination=...&destinationType=QUEUE&exchange=...&routingKey=...
+     */
+    @DeleteMapping("/bindings")
+    public ResponseEntity<Map<String, Object>> deleteBinding(@Valid BindingRequestDto requestDto) {
+        Map<String, Object> result = rabbitAdminService.deleteBinding(requestDto);
         return ResponseEntity.ok(result);
     }
 }

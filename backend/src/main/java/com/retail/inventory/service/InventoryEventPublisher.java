@@ -9,8 +9,8 @@ import com.retail.inventory.dto.StockModificadoEvent;
 public interface InventoryEventPublisher {
 
     /**
-     * Publica el evento de stock modificado para ser procesado asíncronamente por auditoría y notificaciones.
-     * @param event Datos del evento de modificación de stock.
+     * Publica el evento de stock modificado (auditoría y notificaciones). Si el stock resultante
+     * es crítico, además emite el evento de stock crítico (reposición).
      */
     void publishStockModificado(StockModificadoEvent event);
 }

@@ -4,7 +4,7 @@ import com.retail.inventory.dto.ProductRequestDto;
 import com.retail.inventory.dto.ProductResponseDto;
 import com.retail.inventory.service.ProductService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,14 +22,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/products")
+@RequiredArgsConstructor
 public class ProductController {
 
     private final ProductService productService;
-
-    @Autowired
-    public ProductController(ProductService productService) {
-        this.productService = productService;
-    }
 
     /**
      * Listar productos. Accesible para cualquier usuario autenticado.

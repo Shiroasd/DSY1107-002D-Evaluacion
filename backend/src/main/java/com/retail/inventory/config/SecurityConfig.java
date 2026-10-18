@@ -130,14 +130,12 @@ public class SecurityConfig {
         // 1. Validador de vigencia de tiempo (exp y nbf)
         OAuth2TokenValidator<Jwt> timestampValidator = new org.springframework.security.oauth2.jwt.JwtTimestampValidator();
 
-        // 2. Validador de Emisor (acepta formato v2.0 y v1.0 de Microsoft Entra ID para
-        // el tenant configurado)
+        // 2. Validador de Emisor (solo formato v2.0 y v1.0 del tenant configurado)
         OAuth2TokenValidator<Jwt> issuerValidator = token -> {
             if (token.getIssuer() != null) {
                 String iss = token.getIssuer().toString();
-                if (iss.contains(tenantId) ||
-                        iss.startsWith("https://login.microsoftonline.com/") ||
-                        iss.startsWith("https://sts.windows.net/")) {
+                if (iss.equals("https://login.microsoftonline.com/" + tenantId + "/v2.0") ||
+                        iss.equals("https://sts.windows.net/" + tenantId + "/")) {
                     return OAuth2TokenValidatorResult.success();
                 }
             }

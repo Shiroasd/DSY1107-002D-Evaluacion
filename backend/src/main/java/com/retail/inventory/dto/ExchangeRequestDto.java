@@ -2,6 +2,7 @@ package com.retail.inventory.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Data;
 
@@ -15,6 +16,7 @@ import java.util.Map;
 public class ExchangeRequestDto {
 
     @NotBlank(message = "El nombre del exchange es obligatorio")
+    @Size(max = 255, message = "El nombre del exchange no puede superar 255 caracteres")
     @Pattern(regexp = "^[a-zA-Z0-9._-]+$", message = "El nombre del exchange solo puede contener caracteres alfanuméricos, puntos, guiones y guiones bajos")
     private String name;
 

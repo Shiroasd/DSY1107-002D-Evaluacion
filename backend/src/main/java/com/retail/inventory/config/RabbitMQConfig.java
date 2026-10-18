@@ -2,162 +2,131 @@ package com.retail.inventory.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.springframework.amqp.core.*;
+import org.springframework.amqp.core.AcknowledgeMode;
+import org.springframework.amqp.core.AmqpAdmin;
+import org.springframework.amqp.core.Binding;
+import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.DirectExchange;
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.QueueBuilder;
+import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
- * Configuración centralizada de RabbitMQ para el sistema de inventario Cloud Native (Pauta EP3).
- * Declara:
- * 1. TopicExchange principal para eventos de negocio (inventoryExchange).
- * 2. DirectExchange para Dead Letter Exchanges (deadLetterExchange).
- * 3. Colas principales configuradas con Map de argumentos x-dead-letter-exchange y x-dead-letter-routing-key.
- * 4. Colas Dead Letter Queues (DLQ) para captura de mensajes con error de procesamiento.
- * 5. Bindings para conectar colas principales y DLQs a sus exchanges correspondientes.
- * 6. MessageConverter JSON (Jackson) y contenedor con confirmación manual (AcknowledgeMode.MANUAL).
- * 7. Bean AmqpAdmin para gestión dinámica de topologías.
+ * Topología RabbitMQ del sistema de inventario. Todos los nombres provienen de {@link RabbitMQProperties}.
+ *
+ * Rutas de mensajería (casos de uso):
+ *  1. Auditoría:      inventario.exchange (topic) --[inventario.#]--------------> cola auditoría      --(DLX)--> DLQ auditoría
+ *  2. Notificaciones: inventario.exchange (topic) --[inventario.stock.modificado]-> cola notificaciones --(DLX)--> DLQ notificaciones
+ *  3. Reposición:     inventario.exchange (topic) --[reposicion.stock.critico]---> cola reposición     --(DLX)--> DLQ reposición
+ * Las DLQ se enlazan al exchange direct de dead letters (DLX).
  */
 @Configuration
 public class RabbitMQConfig {
 
-    @Value("${app.rabbitmq.exchange:inventario.exchange}")
-    private String exchangeName;
+    private static final String DLX_ARG = "x-dead-letter-exchange";
+    private static final String DLX_RK_ARG = "x-dead-letter-routing-key";
 
-    @Value("${app.rabbitmq.dlx-exchange:inventario.dlx.exchange}")
-    private String dlxExchangeName;
+    private final RabbitMQProperties props;
 
-    @Value("${app.rabbitmq.queues.auditoria:inventario.auditoria.queue}")
-    private String auditoriaQueueName;
-
-    @Value("${app.rabbitmq.queues.auditoria-dlq:inventario.auditoria.dlq}")
-    private String auditoriaDlqQueueName;
-
-    @Value("${app.rabbitmq.queues.notificaciones:inventario.notificaciones.queue}")
-    private String notificacionesQueueName;
-
-    @Value("${app.rabbitmq.queues.notificaciones-dlq:inventario.notificaciones.dlq}")
-    private String notificacionesDlqQueueName;
-
-    @Value("${app.rabbitmq.routing-keys.stock-modificado:inventario.stock.modificado}")
-    private String stockModificadoRoutingKey;
-
-    @Value("${app.rabbitmq.routing-keys.auditoria-all:inventario.#}")
-    private String auditoriaAllRoutingKey;
-
-    @Value("${app.rabbitmq.routing-keys.dlq-auditoria:dlq.auditoria}")
-    private String dlqAuditoriaRoutingKey;
-
-    @Value("${app.rabbitmq.routing-keys.dlq-notificaciones:dlq.notificaciones}")
-    private String dlqNotificacionesRoutingKey;
-
-    /**
-     * Constructor público sin argumentos simple.
-     * Cumple con la compatibilidad Java 17 / Java 21 evitando sintaxis experimental en clases @Configuration.
-     */
-    public RabbitMQConfig() {
+    public RabbitMQConfig(RabbitMQProperties props) {
+        this.props = props;
     }
 
-    // ==========================================
-    // EXCHANGES
-    // ==========================================
+    // ---------- Exchanges ----------
 
     @Bean
     public TopicExchange inventoryExchange() {
-        return new TopicExchange(exchangeName, true, false);
+        return new TopicExchange(props.getExchange(), true, false);
     }
 
     @Bean
     public DirectExchange deadLetterExchange() {
-        return new DirectExchange(dlxExchangeName, true, false);
+        return new DirectExchange(props.getDlxExchange(), true, false);
     }
 
-    // ==========================================
-    // DEAD LETTER QUEUES (DLQs)
-    // ==========================================
-
-    @Bean
-    public Queue auditoriaDlqQueue() {
-        return QueueBuilder.durable(auditoriaDlqQueueName).build();
-    }
-
-    @Bean
-    public Queue notificacionesDlqQueue() {
-        return QueueBuilder.durable(notificacionesDlqQueueName).build();
-    }
-
-    // ==========================================
-    // QUEUES PRINCIPALES (Enlazadas a DLX vía Map)
-    // ==========================================
+    // ---------- Colas principales (con dead-lettering hacia el DLX) ----------
 
     @Bean
     public Queue auditoriaQueue() {
-        Map<String, Object> args = new HashMap<>();
-        args.put("x-dead-letter-exchange", dlxExchangeName);
-        args.put("x-dead-letter-routing-key", dlqAuditoriaRoutingKey);
-        return QueueBuilder.durable(auditoriaQueueName)
-                .withArguments(args)
-                .build();
+        return mainQueue(props.getQueues().getAuditoria(), props.getRoutingKeys().getDlqAuditoria());
     }
 
     @Bean
     public Queue notificacionesQueue() {
-        Map<String, Object> args = new HashMap<>();
-        args.put("x-dead-letter-exchange", dlxExchangeName);
-        args.put("x-dead-letter-routing-key", dlqNotificacionesRoutingKey);
-        return QueueBuilder.durable(notificacionesQueueName)
-                .withArguments(args)
-                .build();
-    }
-
-    // ==========================================
-    // BINDINGS PRINCIPALES
-    // ==========================================
-
-    @Bean
-    public Binding bindingAuditoria(Queue auditoriaQueue, TopicExchange inventoryExchange) {
-        return BindingBuilder.bind(auditoriaQueue)
-                .to(inventoryExchange)
-                .with(auditoriaAllRoutingKey);
+        return mainQueue(props.getQueues().getNotificaciones(), props.getRoutingKeys().getDlqNotificaciones());
     }
 
     @Bean
-    public Binding bindingNotificaciones(Queue notificacionesQueue, TopicExchange inventoryExchange) {
-        return BindingBuilder.bind(notificacionesQueue)
-                .to(inventoryExchange)
-                .with(stockModificadoRoutingKey);
+    public Queue reposicionQueue() {
+        return mainQueue(props.getQueues().getReposicion(), props.getRoutingKeys().getDlqReposicion());
     }
 
-    // ==========================================
-    // BINDINGS DEAD LETTER (DLQ)
-    // ==========================================
+    // ---------- Dead Letter Queues ----------
 
     @Bean
-    public Binding bindingAuditoriaDlq(Queue auditoriaDlqQueue, DirectExchange deadLetterExchange) {
-        return BindingBuilder.bind(auditoriaDlqQueue)
-                .to(deadLetterExchange)
-                .with(dlqAuditoriaRoutingKey);
+    public Queue auditoriaDlqQueue() {
+        return QueueBuilder.durable(props.getQueues().getAuditoriaDlq()).build();
     }
 
     @Bean
-    public Binding bindingNotificacionesDlq(Queue notificacionesDlqQueue, DirectExchange deadLetterExchange) {
-        return BindingBuilder.bind(notificacionesDlqQueue)
-                .to(deadLetterExchange)
-                .with(dlqNotificacionesRoutingKey);
+    public Queue notificacionesDlqQueue() {
+        return QueueBuilder.durable(props.getQueues().getNotificacionesDlq()).build();
     }
 
-    // ==========================================
-    // CONVERTER, TEMPLATE Y CONTAINER FACTORY
-    // ==========================================
+    @Bean
+    public Queue reposicionDlqQueue() {
+        return QueueBuilder.durable(props.getQueues().getReposicionDlq()).build();
+    }
+
+    // ---------- Bindings principales ----------
+
+    @Bean
+    public Binding bindingAuditoria() {
+        return BindingBuilder.bind(auditoriaQueue()).to(inventoryExchange())
+                .with(props.getRoutingKeys().getAuditoriaAll());
+    }
+
+    @Bean
+    public Binding bindingNotificaciones() {
+        return BindingBuilder.bind(notificacionesQueue()).to(inventoryExchange())
+                .with(props.getRoutingKeys().getStockModificado());
+    }
+
+    @Bean
+    public Binding bindingReposicion() {
+        return BindingBuilder.bind(reposicionQueue()).to(inventoryExchange())
+                .with(props.getRoutingKeys().getStockCritico());
+    }
+
+    // ---------- Bindings de DLQ ----------
+
+    @Bean
+    public Binding bindingAuditoriaDlq() {
+        return BindingBuilder.bind(auditoriaDlqQueue()).to(deadLetterExchange())
+                .with(props.getRoutingKeys().getDlqAuditoria());
+    }
+
+    @Bean
+    public Binding bindingNotificacionesDlq() {
+        return BindingBuilder.bind(notificacionesDlqQueue()).to(deadLetterExchange())
+                .with(props.getRoutingKeys().getDlqNotificaciones());
+    }
+
+    @Bean
+    public Binding bindingReposicionDlq() {
+        return BindingBuilder.bind(reposicionDlqQueue()).to(deadLetterExchange())
+                .with(props.getRoutingKeys().getDlqReposicion());
+    }
+
+    // ---------- Converter, template, container factory y admin ----------
 
     @Bean
     public MessageConverter messageConverter() {
@@ -175,8 +144,7 @@ public class RabbitMQConfig {
 
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
-            ConnectionFactory connectionFactory,
-            MessageConverter messageConverter) {
+            ConnectionFactory connectionFactory, MessageConverter messageConverter) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(messageConverter);
@@ -187,5 +155,12 @@ public class RabbitMQConfig {
     @Bean
     public AmqpAdmin amqpAdmin(ConnectionFactory connectionFactory) {
         return new RabbitAdmin(connectionFactory);
+    }
+
+    private Queue mainQueue(String name, String deadLetterRoutingKey) {
+        return QueueBuilder.durable(name)
+                .withArgument(DLX_ARG, props.getDlxExchange())
+                .withArgument(DLX_RK_ARG, deadLetterRoutingKey)
+                .build();
     }
 }

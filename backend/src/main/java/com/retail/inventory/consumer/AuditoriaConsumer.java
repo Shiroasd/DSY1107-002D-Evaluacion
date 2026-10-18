@@ -11,50 +11,40 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 
 /**
- * Consumidor de eventos especializado en Auditoría y Bitácora de Movimientos de Inventario.
- * Atiende la cola de auditoría configurada dinámicamente en app.rabbitmq.queues.auditoria.
- * Implementa confirmación manual (ACK/NACK) derivando mensajes con error hacia la DLQ (requeue = false).
+ * Consumidor del dominio Auditoría: registra la bitácora de movimientos de inventario.
+ * La cola se resuelve desde RabbitMQProperties (app.rabbitmq.queues.auditoria).
  */
 @Component
 @Slf4j
 public class AuditoriaConsumer {
 
-    @RabbitListener(queues = "${app.rabbitmq.queues.auditoria:inventario.auditoria.queue}", ackMode = "MANUAL")
+    private static final String NAME = "ms-auditoria";
+
+    private final MessageAckHandler ackHandler;
+
+    public AuditoriaConsumer(MessageAckHandler ackHandler) {
+        this.ackHandler = ackHandler;
+    }
+
+    @RabbitListener(queues = "#{@rabbitMQProperties.queues.auditoria}", ackMode = "MANUAL")
     public void registrarAuditoria(
             StockModificadoEvent evento,
             Channel channel,
-            @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
+            @Header(AmqpHeaders.DELIVERY_TAG) long tag,
+            @Header(AmqpHeaders.REDELIVERED) boolean redelivered) throws IOException {
 
-        log.info("[ms-auditoria] Mensaje recibido. DeliveryTag: {}", tag);
-
+        log.info("[{}] Mensaje recibido. DeliveryTag: {}", NAME, tag);
         try {
             if (evento == null || evento.getSku() == null || evento.getSku().isBlank()) {
                 throw new IllegalArgumentException("Payload de evento inválido o SKU nulo en mensaje de auditoría");
             }
-
-            log.info("==================================================");
-            log.info("[ms-auditoria] REGISTRANDO MOVIMIENTO EN BITÁCORA:");
-            log.info(" -> Producto ID: {}", evento.getProductId());
-            log.info(" -> SKU: {}", evento.getSku());
-            log.info(" -> Producto: {}", evento.getNombre());
-            log.info(" -> Stock Anterior: {}", evento.getStockAnterior());
-            log.info(" -> Stock Actual: {}", evento.getStockActual());
-            log.info(" -> Tipo de Movimiento: {}", evento.getTipoModificacion());
-            log.info(" -> Fecha / Hora: {}", evento.getFechaMovimiento());
-            log.info(" -> Usuario Responsable: {}", evento.getUsuarioResponsable());
-            log.info("==================================================");
-
-            // Confirmación manual exitosa (ACK)
-            channel.basicAck(tag, false);
-            log.info("[ms-auditoria] Mensaje confirmado exitosamente (ACK) para DeliveryTag: {}", tag);
-
+            log.info("[{}] BITÁCORA -> productoId={}, sku={}, nombre={}, stock {} -> {}, tipo={}, fecha={}, usuario={}",
+                    NAME, evento.getProductId(), evento.getSku(), evento.getNombre(), evento.getStockAnterior(),
+                    evento.getStockActual(), evento.getTipoModificacion(), evento.getFechaMovimiento(),
+                    evento.getUsuarioResponsable());
+            ackHandler.ack(channel, tag, NAME);
         } catch (Exception ex) {
-            log.error("[ms-auditoria ERROR] Fallo al procesar auditoría para DeliveryTag: {}. " +
-                      "Enviando NACK con requeue=false hacia la Dead Letter Queue (DLQ). Causa: {}",
-                      tag, ex.getMessage(), ex);
-
-            // NACK con requeue = false para derivar a la Dead Letter Queue (DLQ)
-            channel.basicNack(tag, false, false);
+            ackHandler.fail(channel, tag, redelivered, ex, NAME);
         }
     }
 }

@@ -13,11 +13,15 @@ import com.retail.inventory.service.InventoryEventPublisher;
 import com.retail.inventory.service.ProductService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -129,7 +133,7 @@ public class ProductServiceImpl implements ProductService {
         log.info("[SÍNCRONO] Producto actualizado exitosamente en BD. ID: {}", updated.getId());
 
         // 2. Comunicación Asíncrona: Disparamos el evento a través del puerto desacoplado
-        if (stockAnterior != updated.getStock()) {
+        if (!Objects.equals(stockAnterior, updated.getStock())) {
             StockModificadoEvent evento = new StockModificadoEvent();
             evento.setProductId(updated.getId());
             evento.setSku(updated.getSku());
@@ -138,7 +142,7 @@ public class ProductServiceImpl implements ProductService {
             evento.setStockActual(updated.getStock());
             evento.setTipoModificacion("ACTUALIZACION_INVENTARIO");
             evento.setFechaMovimiento(LocalDateTime.now().toString());
-            evento.setUsuarioResponsable("admin@tiendaperrito.cl"); // Simulado para la evaluación
+            evento.setUsuarioResponsable(resolveCurrentUser());
 
             eventPublisher.publishStockModificado(evento);
         }
@@ -153,6 +157,22 @@ public class ProductServiceImpl implements ProductService {
             throw new ResourceNotFoundException("Producto no encontrado con ID: " + id);
         }
         productRepository.deleteById(id);
+    }
+
+    /**
+     * Obtiene el usuario autenticado desde el JWT (preferred_username, email, name o sub).
+     */
+    private String resolveCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof Jwt jwt) {
+            for (String claim : new String[]{"preferred_username", "email", "name", "sub"}) {
+                String value = jwt.getClaimAsString(claim);
+                if (value != null && !value.isBlank()) {
+                    return value;
+                }
+            }
+        }
+        return "sistema";
     }
 
     private ProductResponseDto mapToResponse(Product product) {

@@ -1,0 +1,46 @@
+# Clúster RabbitMQ de 2 nodos. Uso: docker compose up -d
+# Verificar: docker exec rabbit1 rabbitmqctl cluster_status
+x-rabbit: &rabbit
+  image: rabbitmq:3.13-management
+  restart: unless-stopped
+  environment: &rabbit-env
+    RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:-cambiar-esta-cookie}
+    RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+    RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-cambiar-esta-clave}
+  volumes:
+    - ./rabbitmq.conf:/etc/rabbitmq/conf.d/90-cluster.conf:ro
+  networks: [rabbit-net]
+  healthcheck:
+    test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+    interval: 15s
+    timeout: 10s
+    retries: 10
+
+services:
+  rabbit1:
+    <<: *rabbit
+    container_name: rabbit1
+    hostname: rabbit1
+    ports: ["5672:5672", "15672:15672"]
+    volumes:
+      - ./rabbitmq.conf:/etc/rabbitmq/conf.d/90-cluster.conf:ro
+      - rabbit1-data:/var/lib/rabbitmq
+
+  rabbit2:
+    <<: *rabbit
+    container_name: rabbit2
+    hostname: rabbit2
+    depends_on:
+      rabbit1:
+        condition: service_healthy
+    ports: ["5673:5672", "15673:15672"]
+    volumes:
+      - ./rabbitmq.conf:/etc/rabbitmq/conf.d/90-cluster.conf:ro
+      - rabbit2-data:/var/lib/rabbitmq
+
+networks:
+  rabbit-net:
+
+volumes:
+  rabbit1-data:
+  rabbit2-data:
