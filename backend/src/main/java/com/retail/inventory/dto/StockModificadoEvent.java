@@ -1,4 +1,4 @@
-﻿package com.retail.inventory.dto;
+package com.retail.inventory.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
