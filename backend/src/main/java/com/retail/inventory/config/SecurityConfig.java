@@ -70,6 +70,8 @@ public class SecurityConfig {
                 .requestMatchers("/h2-console/**").permitAll()
                 // Peticiones Preflight de CORS siempre permitidas
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // Endpoints de Administración de RabbitMQ: Requieren rol 'Admin' extraído del token JWT
+                .requestMatchers("/api/v1/admin/rabbitmq/**").hasAnyRole("Admin", "ADMIN")
                 // Endpoints GET accesibles para cualquier usuario autenticado
                 .requestMatchers(HttpMethod.GET, "/api/v1/products", "/api/v1/products/**", "/api/v1/categories", "/api/v1/categories/**").authenticated()
                 // Endpoints de creación y modificación: Validan rol Admin o permisos/scopes delegados (ej. OT.Create)

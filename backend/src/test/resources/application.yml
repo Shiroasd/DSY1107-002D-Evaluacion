@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: inventory-backend-test
+  rabbitmq:
+    listener:
+      simple:
+        auto-startup: false
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:data.sql
+
+app:
+  security:
+    default-admin: true
+  rabbitmq:
+    queues:
+      stock-alert: stock-alert
+      audit-log: audit-log
+      dead-letter: dead-letter
+    exchanges:
+      inventory-topic: inventory.topic.exchange
+      inventory-dlx: inventory.dlx.exchange
+    routing-keys:
+      product-stock-low: product.stock.low
+      product-all: "product.#"
+      inventory-dlq: inventory.dlq

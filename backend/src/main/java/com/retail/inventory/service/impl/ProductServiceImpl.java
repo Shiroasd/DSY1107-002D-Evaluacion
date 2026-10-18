@@ -6,6 +6,7 @@ import com.retail.inventory.dto.ProductRequestDto;
 import com.retail.inventory.dto.ProductResponseDto;
 import com.retail.inventory.exception.BadRequestException;
 import com.retail.inventory.exception.ResourceNotFoundException;
+import com.retail.inventory.messaging.publisher.InventoryEventPublisher;
 import com.retail.inventory.repository.CategoryRepository;
 import com.retail.inventory.repository.ProductRepository;
 import com.retail.inventory.service.ProductService;
@@ -22,6 +23,7 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final InventoryEventPublisher inventoryEventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -83,6 +85,10 @@ public class ProductServiceImpl implements ProductService {
                 .build();
 
         Product saved = productRepository.save(product);
+        if (saved.getStock() != null && saved.getStock() <= 5) {
+            inventoryEventPublisher.publishCriticalStockAlert(
+                    saved.getId(), saved.getSku(), saved.getName(), saved.getStock());
+        }
         return mapToResponse(saved);
     }
 
@@ -108,6 +114,10 @@ public class ProductServiceImpl implements ProductService {
         product.setCategory(category);
 
         Product updated = productRepository.save(product);
+        if (updated.getStock() != null && updated.getStock() <= 5) {
+            inventoryEventPublisher.publishCriticalStockAlert(
+                    updated.getId(), updated.getSku(), updated.getName(), updated.getStock());
+        }
         return mapToResponse(updated);
     }
 
