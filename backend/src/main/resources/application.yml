@@ -7,6 +7,16 @@ spring:
   application:
     name: inventory-backend
 
+  # Configuración de RabbitMQ
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        acknowledge-mode: manual
+  
   # Configuración exacta de Microsoft Entra ID (Azure Active Directory / Resource Server)
   cloud:
     azure:
@@ -32,7 +42,7 @@ spring:
             - 57c1db2d-484b-463a-b993-45c3ef349e3c
             - 61d2f1d7-99e9-4cf7-83fc-51456a9eb5b6
 
-  # Configuración de Persistencia (H2 para desarrollo/test local, AWS RDS / PostgreSQL para Cloud)
+  # Configuración de Persistencia (H2 para desarrollo/test local)
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:inventorydb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.h2.Driver}
@@ -86,11 +96,16 @@ logging:
     com.retail.inventory: DEBUG
     org.springframework.amqp: INFO
 
+<<<<<<< HEAD
 # Configuración de CORS y parámetros de mensajería RabbitMQ
+=======
+# Configuración de CORS para el Frontend Angular
+>>>>>>> a1092769bc47f2cd7aa206ecf02b383a12d4ab48
 app:
   security:
     default-admin: true
   rabbitmq:
+<<<<<<< HEAD
     queues:
       stock-alert: stock-alert
       audit-log: audit-log
@@ -102,6 +117,25 @@ app:
       product-stock-low: product.stock.low
       product-all: "product.#"
       inventory-dlq: inventory.dlq
+=======
+    exchange: ${RABBITMQ_EXCHANGE:inventario.exchange}
+    dlx-exchange: ${RABBITMQ_DLX_EXCHANGE:inventario.dlx.exchange}
+    queues:
+      auditoria: ${RABBITMQ_QUEUE_AUDITORIA:inventario.auditoria.queue}
+      auditoria-dlq: ${RABBITMQ_QUEUE_AUDITORIA_DLQ:inventario.auditoria.dlq}
+      notificaciones: ${RABBITMQ_QUEUE_NOTIFICACIONES:inventario.notificaciones.queue}
+      notificaciones-dlq: ${RABBITMQ_QUEUE_NOTIFICACIONES_DLQ:inventario.notificaciones.dlq}
+      reposicion: ${RABBITMQ_QUEUE_REPOSICION:inventario.reposicion.queue}
+      reposicion-dlq: ${RABBITMQ_QUEUE_REPOSICION_DLQ:inventario.reposicion.dlq}
+    routing-keys:
+      stock-modificado: ${RABBITMQ_RK_STOCK_MODIFICADO:inventario.stock.modificado}
+      auditoria-all: ${RABBITMQ_RK_AUDITORIA_ALL:inventario.#}
+      dlq-auditoria: ${RABBITMQ_RK_DLQ_AUDITORIA:dlq.auditoria}
+      dlq-notificaciones: ${RABBITMQ_RK_DLQ_NOTIFICACIONES:dlq.notificaciones}
+      stock-critico: ${RABBITMQ_RK_STOCK_CRITICO:reposicion.stock.critico}
+      dlq-reposicion: ${RABBITMQ_RK_DLQ_REPOSICION:dlq.reposicion}
+    stock-critico-umbral: ${RABBITMQ_STOCK_CRITICO_UMBRAL:3}
+>>>>>>> a1092769bc47f2cd7aa206ecf02b383a12d4ab48
   cors:
     allowed-origins:
       - "https://32.193.45.223"
@@ -127,4 +161,3 @@ app:
     exposed-headers:
       - "Authorization"
       - "Location"
-

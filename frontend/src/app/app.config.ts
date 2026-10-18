@@ -81,13 +81,9 @@ export function MSALGuardConfigFactory(): MsalGuardConfiguration {
 import { AuthService } from './services/auth.service';
 
 export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
-  const protectedResourceMap = new Map<string, Array<string>>();
-  protectedResourceMap.set('http://32.192.168.114:8081/api/v1/*', environment.apiConfig.protectedResourceScopes);
-  protectedResourceMap.set('http://localhost:8081/api/v1/*', environment.apiConfig.protectedResourceScopes);
-
   return {
     interactionType: InteractionType.Popup,
-    protectedResourceMap: environment.apiConfig.protectedResourceMap || protectedResourceMap
+    protectedResourceMap: environment.apiConfig.protectedResourceMap
   };
 }
 

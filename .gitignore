@@ -28,3 +28,6 @@ yarn-error.log*
 *.sw?
 .DS_Store
 Thumbs.db
+
+backend/package-lock.json
+backend/.mvn/wrapper/apache-maven-*/

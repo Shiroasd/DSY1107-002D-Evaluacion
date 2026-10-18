@@ -4,40 +4,61 @@ import com.retail.inventory.domain.Category;
 import com.retail.inventory.domain.Product;
 import com.retail.inventory.dto.ProductRequestDto;
 import com.retail.inventory.dto.ProductResponseDto;
+import com.retail.inventory.dto.StockModificadoEvent;
 import com.retail.inventory.exception.BadRequestException;
 import com.retail.inventory.exception.ResourceNotFoundException;
 import com.retail.inventory.messaging.publisher.InventoryEventPublisher;
 import com.retail.inventory.repository.CategoryRepository;
 import com.retail.inventory.repository.ProductRepository;
+import com.retail.inventory.service.InventoryEventPublisher;
 import com.retail.inventory.service.ProductService;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
+@Slf4j
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+<<<<<<< HEAD
     private final InventoryEventPublisher inventoryEventPublisher;
+=======
+    private final InventoryEventPublisher eventPublisher;
+
+    @Autowired
+    public ProductServiceImpl(ProductRepository productRepository,
+                              CategoryRepository categoryRepository,
+                              InventoryEventPublisher eventPublisher) {
+        this.productRepository = productRepository;
+        this.categoryRepository = categoryRepository;
+        this.eventPublisher = eventPublisher;
+    }
+>>>>>>> a1092769bc47f2cd7aa206ecf02b383a12d4ab48
 
     @Override
     @Transactional(readOnly = true)
     public List<ProductResponseDto> getAllProducts() {
         return productRepository.findAll().stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public ProductResponseDto getProductById(Long id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + id));
         return mapToResponse(product);
     }
 
@@ -48,8 +69,8 @@ public class ProductServiceImpl implements ProductService {
             throw new ResourceNotFoundException("Categoría no encontrada con ID: " + categoryId);
         }
         return productRepository.findByCategoryId(categoryId).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
     }
 
     @Override
@@ -59,8 +80,8 @@ public class ProductServiceImpl implements ProductService {
             return getAllProducts();
         }
         return productRepository.searchByNameOrSku(query.trim()).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
     }
 
     @Override
@@ -73,16 +94,16 @@ public class ProductServiceImpl implements ProductService {
         }
 
         Category category = categoryRepository.findById(requestDto.getCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada con ID: " + requestDto.getCategoryId()));
+            .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada con ID: " + requestDto.getCategoryId()));
 
         Product product = Product.builder()
-                .sku(cleanSku)
-                .name(requestDto.getName().trim())
-                .description(requestDto.getDescription() != null && !requestDto.getDescription().isBlank() ? requestDto.getDescription().trim() : null)
-                .price(requestDto.getPrice())
-                .stock(requestDto.getStock())
-                .category(category)
-                .build();
+            .sku(cleanSku)
+            .name(requestDto.getName().trim())
+            .description(requestDto.getDescription() != null && !requestDto.getDescription().isBlank() ? requestDto.getDescription().trim() : null)
+            .price(requestDto.getPrice())
+            .stock(requestDto.getStock())
+            .category(category)
+            .build();
 
         Product saved = productRepository.save(product);
         if (saved.getStock() != null && saved.getStock() <= 5) {
@@ -96,7 +117,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public ProductResponseDto updateProduct(Long id, ProductRequestDto requestDto) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + id));
 
         String cleanSku = requestDto.getSku().trim().toUpperCase();
         if (productRepository.existsBySkuIgnoreCaseAndIdNot(cleanSku, id)) {
@@ -104,7 +125,10 @@ public class ProductServiceImpl implements ProductService {
         }
 
         Category category = categoryRepository.findById(requestDto.getCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada con ID: " + requestDto.getCategoryId()));
+            .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada con ID: " + requestDto.getCategoryId()));
+
+        // Capturamos el stock anterior antes de modificarlo para el evento
+        Integer stockAnterior = product.getStock();
 
         product.setSku(cleanSku);
         product.setName(requestDto.getName().trim());
@@ -113,11 +137,32 @@ public class ProductServiceImpl implements ProductService {
         product.setStock(requestDto.getStock());
         product.setCategory(category);
 
+        // 1. Comunicación Síncrona: Se guarda en la base de datos de inmediato
         Product updated = productRepository.save(product);
+<<<<<<< HEAD
         if (updated.getStock() != null && updated.getStock() <= 5) {
             inventoryEventPublisher.publishCriticalStockAlert(
                     updated.getId(), updated.getSku(), updated.getName(), updated.getStock());
         }
+=======
+        log.info("[SÍNCRONO] Producto actualizado exitosamente en BD. ID: {}", updated.getId());
+
+        // 2. Comunicación Asíncrona: Disparamos el evento a través del puerto desacoplado
+        if (!Objects.equals(stockAnterior, updated.getStock())) {
+            StockModificadoEvent evento = new StockModificadoEvent();
+            evento.setProductId(updated.getId());
+            evento.setSku(updated.getSku());
+            evento.setNombre(updated.getName());
+            evento.setStockAnterior(stockAnterior);
+            evento.setStockActual(updated.getStock());
+            evento.setTipoModificacion("ACTUALIZACION_INVENTARIO");
+            evento.setFechaMovimiento(LocalDateTime.now().toString());
+            evento.setUsuarioResponsable(resolveCurrentUser());
+
+            eventPublisher.publishStockModificado(evento);
+        }
+
+>>>>>>> a1092769bc47f2cd7aa206ecf02b383a12d4ab48
         return mapToResponse(updated);
     }
 
@@ -130,16 +175,32 @@ public class ProductServiceImpl implements ProductService {
         productRepository.deleteById(id);
     }
 
+    /**
+     * Obtiene el usuario autenticado desde el JWT (preferred_username, email, name o sub).
+     */
+    private String resolveCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof Jwt jwt) {
+            for (String claim : new String[]{"preferred_username", "email", "name", "sub"}) {
+                String value = jwt.getClaimAsString(claim);
+                if (value != null && !value.isBlank()) {
+                    return value;
+                }
+            }
+        }
+        return "sistema";
+    }
+
     private ProductResponseDto mapToResponse(Product product) {
         return ProductResponseDto.builder()
-                .id(product.getId())
-                .sku(product.getSku())
-                .name(product.getName())
-                .description(product.getDescription())
-                .price(product.getPrice())
-                .stock(product.getStock())
-                .categoryId(product.getCategory().getId())
-                .categoryName(product.getCategory().getName())
-                .build();
+            .id(product.getId())
+            .sku(product.getSku())
+            .name(product.getName())
+            .description(product.getDescription())
+            .price(product.getPrice())
+            .stock(product.getStock())
+            .categoryId(product.getCategory().getId())
+            .categoryName(product.getCategory().getName())
+            .build();
     }
 }
