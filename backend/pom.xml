@@ -108,17 +108,11 @@
             <scope>test</scope>
         </dependency>
 
-<<<<<<< HEAD
         <!-- Spring Rabbit Test -->
         <dependency>
             <groupId>org.springframework.amqp</groupId>
             <artifactId>spring-rabbit-test</artifactId>
             <scope>test</scope>
-=======
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-amqp</artifactId>
->>>>>>> a1092769bc47f2cd7aa206ecf02b383a12d4ab48
         </dependency>
     </dependencies>
 

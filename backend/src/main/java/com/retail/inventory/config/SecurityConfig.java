@@ -59,53 +59,6 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-<<<<<<< HEAD
-            // Habilitar CORS para integración con Angular SPA en AWS
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            
-            // Deshabilitar CSRF dado que el Resource Server es Stateless con Bearer Tokens
-            .csrf(AbstractHttpConfigurer::disable)
-            
-            // Permitir iframes para consola H2 en desarrollo
-            .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
-            
-            // Política de sesión Stateless
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            
-            // Configuración de autorización de endpoints
-            .authorizeHttpRequests(auth -> auth
-                // Consola H2 para inspección de datos locales
-                .requestMatchers("/h2-console/**").permitAll()
-                // Peticiones Preflight de CORS siempre permitidas
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                // Endpoints de Administración de RabbitMQ: Requieren rol 'Admin' extraído del token JWT
-                .requestMatchers("/api/v1/admin/rabbitmq/**").hasAnyRole("Admin", "ADMIN")
-                // Endpoints GET accesibles para cualquier usuario autenticado
-                .requestMatchers(HttpMethod.GET, "/api/v1/products", "/api/v1/products/**", "/api/v1/categories", "/api/v1/categories/**").authenticated()
-                // Endpoints de creación y modificación: Validan rol Admin o permisos/scopes delegados (ej. OT.Create)
-                .requestMatchers(HttpMethod.POST, "/api/v1/products", "/api/v1/products/**", "/api/v1/categories", "/api/v1/categories/**")
-                    .hasAnyAuthority("ROLE_Admin", "ROLE_ADMIN", "SCOPE_OT.Create", "OT.Create")
-                .requestMatchers(HttpMethod.PUT, "/api/v1/products", "/api/v1/products/**", "/api/v1/categories", "/api/v1/categories/**")
-                    .hasAnyAuthority("ROLE_Admin", "ROLE_ADMIN", "SCOPE_OT.Create", "OT.Create", "SCOPE_OT.Update", "OT.Update")
-                .requestMatchers(HttpMethod.DELETE, "/api/v1/products", "/api/v1/products/**", "/api/v1/categories", "/api/v1/categories/**")
-                    .hasAnyAuthority("ROLE_Admin", "ROLE_ADMIN", "SCOPE_OT.Delete", "OT.Delete")
-                // Cualquier otra solicitud requiere autenticación
-                .anyRequest().authenticated()
-            )
-            
-            // Manejo de excepciones en la cadena de filtros de seguridad
-            .exceptionHandling(exceptions -> exceptions
-                .authenticationEntryPoint(customAuthenticationEntryPoint)
-                .accessDeniedHandler(customAccessDeniedHandler)
-            )
-            
-            // Configuración de OAuth2 Resource Server con validación JWT
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
-                .authenticationEntryPoint(customAuthenticationEntryPoint)
-                .accessDeniedHandler(customAccessDeniedHandler)
-            );
-=======
                 // Habilitar CORS para integración con Angular SPA en AWS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
@@ -140,9 +93,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/products", "/api/v1/products/**",
                                 "/api/v1/categories", "/api/v1/categories/**")
                         .hasAnyAuthority("ROLE_Admin", "ROLE_ADMIN", "SCOPE_OT.Delete", "OT.Delete")
-                        // Endpoints de administración dinámica de RabbitMQ: requiere rol Admin
+                        // Endpoints de administración dinámica de RabbitMQ: requiere rol Admin o scope OT.Admin
                         .requestMatchers("/api/v1/admin/rabbitmq/**")
-                        .hasAnyAuthority("ROLE_Admin", "ROLE_ADMIN")
+                        .hasAnyAuthority("ROLE_Admin", "ROLE_ADMIN", "SCOPE_OT.Admin", "OT.Admin")
                         // Cualquier otra solicitud requiere autenticación
                         .anyRequest().authenticated())
 
@@ -156,7 +109,6 @@ public class SecurityConfig {
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
                         .authenticationEntryPoint(customAuthenticationEntryPoint)
                         .accessDeniedHandler(customAccessDeniedHandler));
->>>>>>> a1092769bc47f2cd7aa206ecf02b383a12d4ab48
 
         return http.build();
     }

@@ -96,28 +96,11 @@ logging:
     com.retail.inventory: DEBUG
     org.springframework.amqp: INFO
 
-<<<<<<< HEAD
 # Configuración de CORS y parámetros de mensajería RabbitMQ
-=======
-# Configuración de CORS para el Frontend Angular
->>>>>>> a1092769bc47f2cd7aa206ecf02b383a12d4ab48
 app:
   security:
     default-admin: true
   rabbitmq:
-<<<<<<< HEAD
-    queues:
-      stock-alert: stock-alert
-      audit-log: audit-log
-      dead-letter: dead-letter
-    exchanges:
-      inventory-topic: inventory.topic.exchange
-      inventory-dlx: inventory.dlx.exchange
-    routing-keys:
-      product-stock-low: product.stock.low
-      product-all: "product.#"
-      inventory-dlq: inventory.dlq
-=======
     exchange: ${RABBITMQ_EXCHANGE:inventario.exchange}
     dlx-exchange: ${RABBITMQ_DLX_EXCHANGE:inventario.dlx.exchange}
     queues:
@@ -135,7 +118,6 @@ app:
       stock-critico: ${RABBITMQ_RK_STOCK_CRITICO:reposicion.stock.critico}
       dlq-reposicion: ${RABBITMQ_RK_DLQ_REPOSICION:dlq.reposicion}
     stock-critico-umbral: ${RABBITMQ_STOCK_CRITICO_UMBRAL:3}
->>>>>>> a1092769bc47f2cd7aa206ecf02b383a12d4ab48
   cors:
     allowed-origins:
       - "https://32.193.45.223"

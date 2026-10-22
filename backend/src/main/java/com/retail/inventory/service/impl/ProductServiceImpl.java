@@ -7,13 +7,12 @@ import com.retail.inventory.dto.ProductResponseDto;
 import com.retail.inventory.dto.StockModificadoEvent;
 import com.retail.inventory.exception.BadRequestException;
 import com.retail.inventory.exception.ResourceNotFoundException;
-import com.retail.inventory.messaging.publisher.InventoryEventPublisher;
 import com.retail.inventory.repository.CategoryRepository;
 import com.retail.inventory.repository.ProductRepository;
 import com.retail.inventory.service.InventoryEventPublisher;
 import com.retail.inventory.service.ProductService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -27,24 +26,12 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
-<<<<<<< HEAD
-    private final InventoryEventPublisher inventoryEventPublisher;
-=======
     private final InventoryEventPublisher eventPublisher;
-
-    @Autowired
-    public ProductServiceImpl(ProductRepository productRepository,
-                              CategoryRepository categoryRepository,
-                              InventoryEventPublisher eventPublisher) {
-        this.productRepository = productRepository;
-        this.categoryRepository = categoryRepository;
-        this.eventPublisher = eventPublisher;
-    }
->>>>>>> a1092769bc47f2cd7aa206ecf02b383a12d4ab48
 
     @Override
     @Transactional(readOnly = true)
@@ -106,10 +93,6 @@ public class ProductServiceImpl implements ProductService {
             .build();
 
         Product saved = productRepository.save(product);
-        if (saved.getStock() != null && saved.getStock() <= 5) {
-            inventoryEventPublisher.publishCriticalStockAlert(
-                    saved.getId(), saved.getSku(), saved.getName(), saved.getStock());
-        }
         return mapToResponse(saved);
     }
 
@@ -139,12 +122,6 @@ public class ProductServiceImpl implements ProductService {
 
         // 1. Comunicación Síncrona: Se guarda en la base de datos de inmediato
         Product updated = productRepository.save(product);
-<<<<<<< HEAD
-        if (updated.getStock() != null && updated.getStock() <= 5) {
-            inventoryEventPublisher.publishCriticalStockAlert(
-                    updated.getId(), updated.getSku(), updated.getName(), updated.getStock());
-        }
-=======
         log.info("[SÍNCRONO] Producto actualizado exitosamente en BD. ID: {}", updated.getId());
 
         // 2. Comunicación Asíncrona: Disparamos el evento a través del puerto desacoplado
@@ -162,7 +139,6 @@ public class ProductServiceImpl implements ProductService {
             eventPublisher.publishStockModificado(evento);
         }
 
->>>>>>> a1092769bc47f2cd7aa206ecf02b383a12d4ab48
         return mapToResponse(updated);
     }
 
