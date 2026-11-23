@@ -12,6 +12,23 @@ export interface ApiErrorMessage {
   timestamp: Date;
 }
 
+export interface InventoryAnalytics {
+  movimientos: number;
+  entradas: number;
+  salidas: number;
+  unidadesIngresadas: number;
+  unidadesRetiradas: number;
+  ultimoMovimiento: string | null;
+  ultimoProcesamiento: string | null;
+}
+
+export interface InventoryActivity {
+  productoId: number;
+  sku: string | null;
+  nombre: string;
+  movimientos: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -21,6 +38,14 @@ export class InventoryService {
 
   private errorNotificationSubject = new Subject<ApiErrorMessage>();
   public errorNotification$: Observable<ApiErrorMessage> = this.errorNotificationSubject.asObservable();
+
+  public getInventorySummary(): Observable<InventoryAnalytics> {
+    return this.http.get<InventoryAnalytics>(`${this.baseUrl}/analytics/inventory/summary`);
+  }
+
+  public getTopInventoryProducts(): Observable<InventoryActivity[]> {
+    return this.http.get<InventoryActivity[]>(`${this.baseUrl}/analytics/inventory/top-products`);
+  }
 
   // --- PRODUCTOS ---
 

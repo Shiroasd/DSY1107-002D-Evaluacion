@@ -1,431 +1,203 @@
 import { Injectable, inject } from '@angular/core';
-import { Router } from '@angular/router';
-import { MsalService, MsalBroadcastService } from '@azure/msal-angular';
-import { EventMessage, EventType, InteractionStatus, AuthenticationResult } from '@azure/msal-browser';
-import { BehaviorSubject, Observable, filter, of, catchError, map } from 'rxjs';
+import { MsalBroadcastService, MsalService } from '@azure/msal-angular';
+import {
+  AccountInfo, AuthenticationResult, InteractionRequiredAuthError, InteractionStatus
+} from '@azure/msal-browser';
+import { BehaviorSubject, Observable, catchError, defer, finalize, map, of, shareReplay, tap } from 'rxjs';
 import { UserProfile } from '../models/user-profile.model';
 import { environment } from '../../environments/environment';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class AuthService {
-  private msalService = inject(MsalService);
-  private msalBroadcastService = inject(MsalBroadcastService);
-  private router = inject(Router);
+  private readonly msal = inject(MsalService);
+  private readonly broadcast = inject(MsalBroadcastService);
+  private readonly apiScope = environment.apiConfig.scope;
+  private readonly apiResource = this.apiScope.slice(0, this.apiScope.lastIndexOf('/'));
+  private readonly profile = new BehaviorSubject<UserProfile | null>(null);
+  private readonly needsInteraction = new BehaviorSubject(false);
+  private cachedToken?: { accountKey: string; value: string };
+  private pending?: { accountKey: string; token$: Observable<string | null> };
+  private readonly redirect$ = defer(() => this.msal.handleRedirectObservable()).pipe(
+    tap(result => {
+      if (result?.account) {
+        this.msal.instance.setActiveAccount(result.account);
+        this.rememberToken(result);
+      }
+      this.updateUserState();
+    }),
+    catchError(() => {
+      console.error('[AuthService] No se pudo completar la autenticación.');
+      return of(null);
+    }),
+    shareReplay(1)
+  );
 
-  private userProfileSubject = new BehaviorSubject<UserProfile | null>(null);
-  public currentUser$: Observable<UserProfile | null> = this.userProfileSubject.asObservable();
-
-  private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
-  public isAuthenticated$: Observable<boolean> = this.isAuthenticatedSubject.asObservable();
-
-  private isAdminSubject = new BehaviorSubject<boolean>(false);
-  public isAdmin$: Observable<boolean> = this.isAdminSubject.asObservable();
-
-  public isInteractionInProgress = false;
+  readonly currentUser$ = this.profile.asObservable();
+  readonly isAuthenticated$ = this.currentUser$.pipe(map(user => user !== null));
+  readonly isAdmin$ = this.currentUser$.pipe(map(user => user?.isAdmin ?? false));
+  readonly needsInteraction$ = this.needsInteraction.asObservable();
+  isInteractionInProgress = true;
 
   constructor() {
-    this.initMsalEvents();
-  }
-
-  private initMsalEvents(): void {
-    // Escuchar el estado de interacción de MSAL para prevenir llamadas concurrentes
-    this.msalBroadcastService.inProgress$.subscribe((status: InteractionStatus) => {
+    this.broadcast.inProgress$.subscribe(status => {
       this.isInteractionInProgress = status !== InteractionStatus.None;
+      if (!this.isInteractionInProgress) {
+        this.updateUserState();
+      }
     });
-
-    // Escuchar cuando no haya interacción activa en MSAL
-    this.msalBroadcastService.inProgress$
-      .pipe(filter((status: InteractionStatus) => status === InteractionStatus.None))
-      .subscribe(() => {
-        this.updateUserState();
-      });
-
-    // Escuchar eventos de autenticación exitosa
-    this.msalBroadcastService.msalSubject$
-      .pipe(
-        filter((msg: EventMessage) =>
-          msg.eventType === EventType.LOGIN_SUCCESS ||
-          msg.eventType === EventType.ACQUIRE_TOKEN_SUCCESS ||
-          msg.eventType === EventType.LOGOUT_SUCCESS ||
-          msg.eventType === EventType.SSO_SILENT_SUCCESS
-        )
-      )
-      .subscribe((result: EventMessage) => {
-        if (result.payload) {
-          const payload = result.payload as any;
-          if (payload.account) {
-            this.msalService.instance.setActiveAccount(payload.account);
-          }
-          // Priorizar idToken sobre accessToken para evitar tokens internos de Microsoft Graph
-          const candidateToken = payload.idToken || payload.accessToken;
-          if (candidateToken && this.isTokenValid(candidateToken)) {
-            this.setToken(candidateToken);
-          } else if (payload.idToken && this.isTokenValid(payload.idToken)) {
-            this.setToken(payload.idToken);
-          }
-        }
-        this.updateUserState();
-      });
-
-    // Escuchar posibles fallos de autenticación para diagnóstico
-    this.msalBroadcastService.msalSubject$
-      .pipe(
-        filter((msg: EventMessage) =>
-          msg.eventType === EventType.LOGIN_FAILURE ||
-          msg.eventType === EventType.ACQUIRE_TOKEN_FAILURE
-        )
-      )
-      .subscribe((msg: EventMessage) => {
-        console.error('[AuthService] Error MSAL recibido:', msg.eventType, msg.error);
-      });
-
-    // Inicializar estado inmediato con cuentas en caché local
-    this.updateUserState();
   }
 
-  private parseJwt(token: string): any {
-    try {
-      const base64Url = token.split('.')[1];
-      if (!base64Url) return null;
-      let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      while (base64.length % 4) {
-        base64 += '=';
-      }
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split('')
-          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
-      );
-      return JSON.parse(jsonPayload);
-    } catch {
-      return null;
-    }
+  handleRedirectObservable(): Observable<AuthenticationResult | null> {
+    return this.redirect$;
   }
 
-  public updateUserState(): void {
-    try {
-      const accounts = this.msalService.instance.getAllAccounts();
-      if (accounts && accounts.length > 0) {
-        let activeAccount = this.msalService.instance.getActiveAccount();
-        if (!activeAccount) {
-          activeAccount = accounts[0];
-          this.msalService.instance.setActiveAccount(activeAccount);
-        }
-
-        const claims = (activeAccount.idTokenClaims as any) || {};
-        let roles: string[] = Array.isArray(claims.roles) ? [...claims.roles] : [];
-        let scopes: string[] = [];
-
-        // 1. Extraer scopes desde claims de Azure AD (claim 'scp' o 'scope')
-        if (claims.scp && typeof claims.scp === 'string') {
-          scopes.push(...claims.scp.split(' ').filter(Boolean));
-        } else if (claims.scope && typeof claims.scope === 'string') {
-          scopes.push(...claims.scope.split(' ').filter(Boolean));
-        }
-
-        // 2. Si existe un Access Token almacenado en sesión, decodificar sus claims para obtener scopes y roles reales
-        const storedToken = this.getStoredToken();
-        if (storedToken) {
-          const tokenPayload = this.parseJwt(storedToken);
-          if (tokenPayload) {
-            if (tokenPayload.scp && typeof tokenPayload.scp === 'string') {
-              const accessScopes = tokenPayload.scp.split(' ').filter((s: string) => Boolean(s) && !scopes.includes(s));
-              scopes.push(...accessScopes);
-            }
-            if (Array.isArray(tokenPayload.roles) && roles.length === 0) {
-              roles = [...tokenPayload.roles];
-            }
-          }
-        }
-
-        // Si no se encuentran scopes en el token aún, incluir el scope estándar delegado configurado
-        if (scopes.length === 0) {
-          scopes = ['user_impersonation', 'openid', 'profile'];
-        }
-
-        const hasExplicitRoles = roles.length > 0;
-        const isAdmin = hasExplicitRoles
-          ? roles.some(r => r.trim().toLowerCase() === 'admin' || r.trim().toLowerCase() === 'administrador')
-          : true;
-
-        const profile: UserProfile = {
-          name: activeAccount.name || claims.name || activeAccount.username,
-          username: activeAccount.username || claims.preferred_username || claims.email || 'Usuario',
-          roles: hasExplicitRoles ? roles : ['Admin'],
-          scopes: scopes,
-          isAdmin: isAdmin
-        };
-
-        this.userProfileSubject.next(profile);
-        this.isAuthenticatedSubject.next(true);
-        this.isAdminSubject.next(isAdmin);
-      } else {
-        this.userProfileSubject.next(null);
-        this.isAuthenticatedSubject.next(false);
-        this.isAdminSubject.next(false);
-      }
-    } catch (error) {
-      console.warn('[AuthService] Verificación de estado de cuenta:', error);
-    }
-  }
-
-  public getScopes(): string[] {
-    return this.userProfileSubject.value?.scopes || [];
-  }
-
-  public getRoles(): string[] {
-    return this.userProfileSubject.value?.roles || [];
-  }
-
-  /**
-   * Expone el procesamiento reactivo del callback de redirección de MSAL
-   */
-  public handleRedirectObservable(): Observable<any> {
-    return this.msalService.handleRedirectObservable();
-  }
-
-  /**
-   * Flujo de inicio de sesión con Microsoft Entra ID (Azure AD).
-   * 1. Si ya existe una cuenta conectada en el caché local de MSAL, la activa inmediatamente.
-   * 2. Si no, solicita autenticación usando los scopes estándar ('openid', 'profile', 'email')
-   *    para garantizar compatibilidad total con cuentas institucionales / académicas.
-   */
-  public login(): void {
+  login(): void {
     if (this.isInteractionInProgress) {
-      console.warn('[AuthService] Interacción en progreso, ignorando invocación concurrente a loginRedirect.');
       return;
     }
 
-    console.log('Iniciando flujo de login...');
-    try {
-      // 1. Limpiar posibles bloqueos residuales de interacción en sessionStorage y localStorage
-      [sessionStorage, localStorage].forEach(storage => {
-        Object.keys(storage).forEach(key => {
-          if (key.startsWith('msal.') && (key.includes('interaction') || key.includes('request'))) {
-            storage.removeItem(key);
-          }
-        });
-      });
+    this.isInteractionInProgress = true;
+    const account = this.getActiveAccount();
+    const redirect$ = account && this.needsInteraction.value
+      ? this.msal.acquireTokenRedirect({ account, scopes: [this.apiScope] })
+      : this.msal.loginRedirect({ scopes: [this.apiScope], prompt: 'select_account' });
 
-      const authRequest = {
-        scopes: ['openid', 'profile', 'email'],
-        prompt: 'select_account'
-      };
-
-      console.info('[AuthService] Redirigiendo a Microsoft Entra ID para inicio de sesión...');
-      this.msalService.loginRedirect(authRequest).subscribe({
-        next: () => console.log('[AuthService] loginRedirect ejecutado con éxito.'),
-        error: (redirectError) => {
-          console.error('[AuthService] Error al iniciar loginRedirect:', redirectError);
-        }
-      });
-    } catch (error) {
-      console.error('[AuthService] Excepción al ejecutar login:', error);
-    }
-  }
-
-  /**
-   * Cierre de sesión de Microsoft Entra ID.
-   */
-  public logout(): void {
-    try {
-      this.cachedToken = null;
-      sessionStorage.removeItem('cloudstock_jwt_token');
-      localStorage.removeItem('cloudstock_jwt_token');
-    } catch {}
-
-    const logoutRequest = {
-      postLogoutRedirectUri: window.location.origin
-    };
-
-    this.msalService.logoutRedirect(logoutRequest).subscribe({
-      error: (err) => console.warn('[AuthService] Error en logoutRedirect:', err)
+    redirect$.subscribe({
+      error: () => {
+        this.isInteractionInProgress = false;
+        console.error('[AuthService] No se pudo iniciar la autenticación.');
+      }
     });
   }
 
-  private cachedToken: string | null = null;
-
-  public isTokenValid(token: string | null): boolean {
-    if (!token || !token.startsWith('ey')) return false;
-    const payload = this.parseJwt(token);
-    if (!payload) return false;
-
-    // Tokens emitidos internamente para Microsoft Graph no son válidos para Resource Servers propios
-    const aud = payload.aud ? (Array.isArray(payload.aud) ? payload.aud.join(' ') : String(payload.aud)) : '';
-    if (aud.includes('00000003-0000-0000-c000-000000000000') || aud.includes('graph.microsoft.com')) {
-      return false;
-    }
-
-    if (payload.exp && typeof payload.exp === 'number') {
-      // Validar que no haya expirado con un margen de seguridad de 10 segundos
-      return payload.exp * 1000 > Date.now() + 10000;
-    }
-    return true;
-  }
-
-  public setToken(token: string | null): void {
-    if (token && this.isTokenValid(token)) {
-      this.cachedToken = token;
-      try {
-        sessionStorage.setItem('cloudstock_jwt_token', token);
-        localStorage.setItem('cloudstock_jwt_token', token);
-      } catch {}
-    }
-  }
-
-  public getStoredToken(): string | null {
-    // 1. Token en memoria si aún es válido
-    if (this.isTokenValid(this.cachedToken)) {
-      return this.cachedToken;
-    }
-
-    // 2. Token guardado en sessionStorage o localStorage si aún es válido
-    try {
-      const sessionSaved = sessionStorage.getItem('cloudstock_jwt_token');
-      if (this.isTokenValid(sessionSaved)) {
-        this.cachedToken = sessionSaved;
-        return sessionSaved;
-      }
-      const localSaved = localStorage.getItem('cloudstock_jwt_token');
-      if (this.isTokenValid(localSaved)) {
-        this.cachedToken = localSaved;
-        return localSaved;
-      }
-    } catch {}
-
-    // 2.5 Verificar si la cuenta activa en memoria tiene idToken directo
-    try {
-      const activeAccount = this.getActiveAccount();
-      if (activeAccount && (activeAccount as any).idToken && this.isTokenValid((activeAccount as any).idToken)) {
-        const idToken = (activeAccount as any).idToken;
-        this.setToken(idToken);
-        return idToken;
-      }
-    } catch {}
-
-    // 3. Buscar el token válido más reciente en el almacenamiento de MSAL (preferencia a ID tokens)
-    try {
-      let bestToken: string | null = null;
-      let latestExp = 0;
-
-      const storages = [localStorage, sessionStorage];
-      for (const storage of storages) {
-        for (let i = 0; i < storage.length; i++) {
-          const key = storage.key(i);
-          if (key && (key.toLowerCase().includes('idtoken') || key.toLowerCase().includes('accesstoken') || key.toLowerCase().includes('credential') || key.toLowerCase().includes('token'))) {
-            const val = storage.getItem(key);
-            if (val) {
-              try {
-                const parsed = JSON.parse(val);
-                const secret = parsed.secret || parsed.token || parsed.idToken || parsed.credential || (typeof parsed === 'string' ? parsed : null);
-                if (secret && typeof secret === 'string' && secret.startsWith('ey')) {
-                  if (this.isTokenValid(secret)) {
-                    const payload = this.parseJwt(secret);
-                    const exp = payload?.exp ? payload.exp * 1000 : 0;
-                    const isIdToken = key.toLowerCase().includes('idtoken') || parsed.credentialType === 'IdToken';
-                    // Ponderar ID Tokens para asegurar compatibilidad con Spring Boot
-                    const score = exp + (isIdToken ? 100000000 : 0);
-                    if (score > latestExp) {
-                      latestExp = score;
-                      bestToken = secret;
-                    }
-                  }
-                }
-              } catch {}
-            }
-          }
-        }
-      }
-
-      if (bestToken) {
-        this.setToken(bestToken);
-        return bestToken;
-      }
-    } catch (e) {
-      console.warn('[AuthService] Búsqueda de token en almacenamiento:', e);
-    }
-
-    return null;
-  }
-
-  /**
-   * Adquiere un token válido de forma transparente y reactiva.
-   * 1. Retorna el token en caché si aún no ha expirado.
-   * 2. Si ha expirado o no está en memoria, invoca acquireTokenSilent() de MSAL
-   *    para renovarlo en segundo plano con Microsoft Entra ID usando el refresh token.
-   */
-  public acquireToken(): Observable<string | null> {
-    const existingToken = this.getStoredToken();
-    if (existingToken) {
-      return of(existingToken);
-    }
-
+  logout(): void {
     const account = this.getActiveAccount();
-    if (!account) {
-      return of(null);
-    }
-
-    const silentRequest = {
-      account: account,
-      scopes: ['openid', 'profile', 'email']
-    };
-
-    return this.msalService.acquireTokenSilent(silentRequest).pipe(
-      map((result: AuthenticationResult) => {
-        if (result.account) {
-          this.msalService.instance.setActiveAccount(result.account);
-        }
-        const candidateToken = result.idToken || result.accessToken;
-        if (candidateToken && this.isTokenValid(candidateToken)) {
-          this.setToken(candidateToken);
-          this.updateUserState();
-          return candidateToken;
-        } else if (result.idToken) {
-          this.setToken(result.idToken);
-          this.updateUserState();
-          return result.idToken;
-        }
-        return null;
-      }),
-      catchError((error) => {
-        console.warn('[AuthService] Renovación silenciosa de token falló:', error);
-        return of(null);
-      })
-    );
+    this.cachedToken = undefined;
+    this.pending = undefined;
+    this.needsInteraction.next(false);
+    this.profile.next(null);
+    this.msal.logoutRedirect({ account, postLogoutRedirectUri: window.location.origin }).subscribe({
+      error: () => this.updateUserState()
+    });
   }
 
-  public getActiveAccount() {
-    try {
-      let active = this.msalService.instance.getActiveAccount();
-      if (!active) {
-        const accounts = this.msalService.instance.getAllAccounts();
-        if (accounts && accounts.length > 0) {
-          active = accounts[0];
-          this.msalService.instance.setActiveAccount(active);
-        }
+  acquireToken(): Observable<string | null> {
+    return defer(() => {
+      const account = this.getActiveAccount();
+      if (!account) {
+        return of(null);
       }
+      const accountKey = this.accountKey(account);
+      const cached = this.getStoredToken();
+      if (cached) {
+        return of(cached);
+      }
+      const pending = this.pending;
+      if (pending?.accountKey === accountKey) {
+        return pending.token$;
+      }
+
+      const token$ = this.msal.acquireTokenSilent({ account, scopes: [this.apiScope] }).pipe(
+        map(result => {
+          if (this.pending?.token$ !== token$ ||
+              this.accountKey(this.getActiveAccount()) !== accountKey ||
+              this.accountKey(result.account) !== accountKey) {
+            return null;
+          }
+          this.rememberToken(result);
+          this.updateUserState();
+          return this.getStoredToken();
+        }),
+        catchError(error => {
+          if (error instanceof InteractionRequiredAuthError &&
+              this.pending?.token$ === token$ &&
+              this.accountKey(this.getActiveAccount()) === accountKey) {
+            this.needsInteraction.next(true);
+          }
+          return of(null);
+        }),
+        finalize(() => {
+          if (this.pending?.token$ === token$) {
+            this.pending = undefined;
+          }
+        }),
+        shareReplay(1)
+      );
+      this.pending = { accountKey, token$ };
+      return token$;
+    });
+  }
+
+  getStoredToken(): string | null {
+    const token = this.cachedToken;
+    return token && token.accountKey === this.accountKey(this.getActiveAccount()) && this.isTokenValid(token.value)
+      ? token.value : null;
+  }
+
+  getActiveAccount(): AccountInfo | null {
+    const active = this.msal.instance.getActiveAccount();
+    if (active) {
       return active;
+    }
+    const account = this.msal.instance.getAllAccounts()[0];
+    if (account) {
+      this.msal.instance.setActiveAccount(account);
+    }
+    return account ?? null;
+  }
+
+  private accountKey(account: AccountInfo | null): string {
+    return account ? [account.homeAccountId, account.environment, account.tenantId].join(':') : '';
+  }
+
+  private rememberToken(result: AuthenticationResult): void {
+    this.cachedToken = undefined;
+    const accountKey = this.accountKey(result.account);
+    if (accountKey && this.isTokenValid(result.accessToken)) {
+      this.cachedToken = { accountKey, value: result.accessToken };
+      this.needsInteraction.next(false);
+    }
+  }
+
+  private isTokenValid(token: string): boolean {
+    const claims = this.parseJwt(token);
+    const audiences = Array.isArray(claims?.aud) ? claims.aud : [claims?.aud];
+    return audiences.length > 0
+      && audiences.every(aud => aud === this.apiResource || aud === this.apiResource.replace(/^api:\/\//, ''))
+      && typeof claims?.exp === 'number' && claims.exp * 1000 > Date.now() + 30000
+      && ((typeof claims.scp === 'string' && !!claims.scp.trim()) ||
+          (Array.isArray(claims.roles) && claims.roles.length > 0));
+  }
+
+  private parseJwt(token: string): { aud?: string | string[]; exp?: number; scp?: string; roles?: string[] } | null {
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return null;
+    }
+    try {
+      const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const bytes = Uint8Array.from(atob(payload), character => character.charCodeAt(0));
+      return JSON.parse(new TextDecoder().decode(bytes));
     } catch {
       return null;
     }
   }
 
-  public getAllAccounts() {
-    try {
-      return this.msalService.instance.getAllAccounts();
-    } catch {
-      return [];
+  private updateUserState(): void {
+    const account = this.getActiveAccount();
+    if (!account) {
+      this.profile.next(null);
+      return;
     }
-  }
-
-  public setActiveAccount(account: any) {
-    try {
-      this.msalService.instance.setActiveAccount(account);
-    } catch (e) {
-      console.warn('[AuthService] Error al asignar cuenta activa:', e);
-    }
+    const token = this.getStoredToken();
+    const claims = token ? this.parseJwt(token) : null;
+    const roles = Array.isArray(claims?.roles) ? claims.roles : [];
+    this.profile.next({
+      name: account.name || account.username || 'Usuario',
+      username: account.username,
+      roles,
+      scopes: typeof claims?.scp === 'string' ? claims.scp.split(/\s+/).filter(Boolean) : [],
+      isAdmin: roles.some(role => ['Admin', 'ADMIN', 'ROLE_Admin', 'ROLE_ADMIN'].includes(role))
+    });
   }
 }

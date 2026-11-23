@@ -12,16 +12,5 @@ export const authGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  if (authService.getActiveAccount()) {
-    return true;
-  }
-
-  const accounts = authService.getAllAccounts();
-  if (accounts && accounts.length > 0) {
-    authService.setActiveAccount(accounts[0]);
-    authService.updateUserState();
-    return true;
-  }
-
-  return router.createUrlTree(['/']);
+  return !!authService.getActiveAccount() || router.createUrlTree(['/']);
 };

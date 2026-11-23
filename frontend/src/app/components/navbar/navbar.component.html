@@ -33,6 +33,7 @@
         </svg>
         <span>Categorías</span>
       </a>
+      <a routerLink="/analytics" routerLinkActive="active" class="nav-link">Analítica</a>
     </nav>
 
     <!-- User Section & Auth Controls -->
@@ -51,6 +52,11 @@
             </div>
           </div>
         </div>
+
+        <button *ngIf="authService.needsInteraction$ | async"
+                (click)="login()" [disabled]="isLoggingIn" class="btn-login">
+          Renovar acceso a CloudStock
+        </button>
 
         <!-- Logout Button -->
         <button (click)="onLogout()" class="btn-logout" title="Cerrar sesión de Microsoft Entra ID">

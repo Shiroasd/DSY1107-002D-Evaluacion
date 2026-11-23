@@ -1,7 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { filter, take } from 'rxjs';
 import { InventoryService } from '../../services/inventory.service';
 import { AuthService } from '../../services/auth.service';
 import { Product, ProductRequest } from '../../models/product.model';
@@ -37,31 +36,8 @@ export class InventoryComponent implements OnInit {
   public productToDelete: Product | null = null;
 
   ngOnInit(): void {
-    if (this.authService.getStoredToken()) {
-      this.loadCategories();
-      this.loadProducts();
-    } else if (this.authService.getActiveAccount()) {
-      this.authService.acquireToken().subscribe({
-        next: () => {
-          this.loadCategories();
-          this.loadProducts();
-        },
-        error: () => {
-          this.loadCategories();
-          this.loadProducts();
-        }
-      });
-    } else {
-      this.authService.isAuthenticated$
-        .pipe(
-          filter((isAuth) => isAuth === true),
-          take(1)
-        )
-        .subscribe(() => {
-          this.loadCategories();
-          this.loadProducts();
-        });
-    }
+    this.loadCategories();
+    this.loadProducts();
   }
 
   public loadCategories(): void {

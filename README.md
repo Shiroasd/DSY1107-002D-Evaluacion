@@ -257,7 +257,7 @@ El backend está desarrollado sobre **Java 17** y **Spring Boot 3.3.3**, operand
   Implementa la interfaz `Converter<Jwt, Collection<GrantedAuthority>>`. Su función es traducir los claims contenidos en el JWT emitido por Microsoft Entra ID al modelo de seguridad de Spring Security:
   * Inspecciona el claim `roles` (App Roles asignados en Azure Portal). Para cada rol encontrado (ej. `"Admin"`), genera la autoridad con prefijo estándar de Spring: `ROLE_Admin`.
   * Inspecciona los claims `scp` o `scope` (Permisos delegados). Para cada scope (ej. `"user_impersonation"`), genera la autoridad con prefijo `SCOPE_user_impersonation`.
-  * Soporta la propiedad `app.security.default-admin`: Si se encuentra activa en el entorno de desarrollo, inyecta privilegios administrativos por defecto para facilitar pruebas continuas.
+  * Los permisos de escritura y administración se conceden mediante roles de aplicación o scopes delegados explícitos. La administración Kafka requiere el rol `Admin` o `ADMIN` de la API. Spring valida la audiencia del access token contra el client ID o el URI de aplicación configurado de CloudStock.
 
 * **`CorsConfig.java`**:
   Componente auxiliar que registra un `CorsFilter` asegurando máxima compatibilidad en peticiones HTTP cross-origin provenientes de navegadores web.
@@ -467,7 +467,7 @@ El frontend es una **Single Page Application (SPA)** moderna construida con **An
   * `msalConfig.auth.clientId`: `61d2f1d7-99e9-4cf7-83fc-51456a9eb5b6` (Client ID registrado en Azure para la SPA).
   * `msalConfig.auth.authority`: Endpoint de login con el Tenant ID corporativo.
   * `msalConfig.auth.redirectUri`: URI de redirección (`http://localhost:4200` o la IP de AWS).
-  * `apiConfig.protectedResourceMap`: Asocia los prefijos de URL de la API con los scopes requeridos (`user_impersonation`).
+  * El interceptor adjunta el access token al origen y la ruta de `apiConfig.baseUrl`. La adquisición usa el scope de `apiConfig.scope`. Si Entra ID requiere interacción, el botón **Renovar acceso a CloudStock** inicia la autorización cuando el usuario lo elige.
 * **`app.config.ts`**:
   Configura la aplicación Standalone mediante `provideRouter` y `provideHttpClient`:
   * `MSALInstanceFactory()`: Inicializa `PublicClientApplication` de `@azure/msal-browser` configurando almacenamiento en `localStorage` y soporte para cookies (`storeAuthStateInCookie: true`).
@@ -633,9 +633,9 @@ La siguiente tabla resume las operaciones permitidas según el rol asignado en M
 ## 8. Guía de Instalación y Ejecución Local
 
 ### Prerrequisitos del Entorno:
-1. **Java Development Kit (JDK)**: Versión 17 o superior.
+1. **Java Development Kit (JDK)**: Usa JDK 17 o 21 LTS. El proyecto compila para Java 17 y la versión actual de Lombok (1.18.36) es incompatible con JDK 25.
 2. **Node.js**: Versión 18.19.0 o superior (recomendado Node 20 LTS) y `npm`.
-3. **RabbitMQ**: Servicio de mensajería corriendo localmente en el puerto `5672` (o mediante Docker con el comando: `docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management`).
+3. **RabbitMQ**: Broker activo en el puerto `5672` y credenciales de un usuario con permisos en el host virtual `/`.
 4. **Conexión a Internet**: Necesaria para descargar dependencias Maven/npm y validar las firmas de tokens contra los endpoints JWKS de Microsoft Entra ID.
 
 ---
@@ -646,11 +646,23 @@ La siguiente tabla resume las operaciones permitidas según el rol asignado en M
    ```bash
    cd backend
    ```
-2. Ejecuta el backend utilizando el Maven Wrapper:
-   * **En Windows (PowerShell / CMD):**
+2. Usa el Maven Wrapper incluido. En la primera ejecución descarga Maven 3.9.8. Puedes ejecutarlo sin instalar Maven ni agregarlo al `PATH`.
+   * **En Windows (PowerShell):** Con RabbitMQ en ejecución, ajusta `JAVA_HOME` a tu JDK 17 o 21. Introduce la contraseña vigente del broker en el cuadro de credenciales. El comando la pasa al proceso mediante variables de entorno de la sesión.
      ```powershell
-     .\mvnw.cmd spring-boot:run
+     $env:JAVA_HOME = 'C:\Program Files\Java\jdk-21.0.11'
+     $rabbit = Get-Credential -UserName 'admin' -Message 'Credenciales vigentes de RabbitMQ'
+     if (-not $rabbit) { throw 'Se necesitan las credenciales de RabbitMQ.' }
+     $env:SPRING_RABBITMQ_USERNAME = $rabbit.UserName
+     $env:SPRING_RABBITMQ_PASSWORD = $rabbit.GetNetworkCredential().Password
+     try {
+         .\mvnw.cmd spring-boot:run
+     } finally {
+         Remove-Item Env:SPRING_RABBITMQ_USERNAME, Env:SPRING_RABBITMQ_PASSWORD
+         $rabbit = $null
+     }
      ```
+     Si quieres habilitar el historial Kafka, ejecuta `$env:INVENTARIO_KAFKA_ENABLED = 'true'` antes del bloque.
+     Para compilar y ejecutar las pruebas, usa `.\mvnw.cmd verify`.
    * **En Linux / macOS:**
      ```bash
      chmod +x mvnw
@@ -808,3 +820,20 @@ curl -i -X PUT http://localhost:8080/api/v1/products/1 \
  -> Enviando correo al administrador...
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ```
+
+## Movimientos, analítica y alertas con Kafka
+
+Para habilitar `inventario.movimientos` e `inventario.alertas`, inicia el Compose independiente de Kafka y configura
+`INVENTARIO_KAFKA_ENABLED=true` en el entorno del backend. Kafka UI está en
+`http://localhost:8085`. Los endpoints JWT son `GET /api/v1/movimientos`
+y `GET /api/v1/products/{id}/movimientos` para el historial y `GET /api/v1/alertas`
+para las alertas de stock crítico. La administración en `/api/v1/admin/kafka/topics`
+requiere un rol explícito `Admin` o `ADMIN` en el JWT de Microsoft Entra ID.
+
+El grupo `inventario-analitica-group` consume `inventario.movimientos` de forma independiente del historial. Actualiza métricas persistentes por evento y evita duplicados por UUID. La vista **Analítica** en Angular consulta el resumen y los productos con mayor actividad cada 15 segundos y permite actualizar manualmente.
+
+Las rutas autenticadas de solo lectura son `GET /api/v1/analytics/inventory/summary`, `GET /api/v1/analytics/inventory/products` y `GET /api/v1/analytics/inventory/top-products`. Usa H2 en archivo y `ddl-auto=update` para conservar historial, alertas y métricas al reiniciar el backend.
+
+Consulta la [guía de implementación y demostración](IMPLEMENTACION_HISTORIAL_KAFKA.md)
+para levantar RabbitMQ y Kafka, conservar el historial entre reinicios y probarlo
+con Postman.

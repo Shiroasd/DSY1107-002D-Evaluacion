@@ -24,6 +24,12 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'analytics',
+    loadComponent: () => import('./components/inventory-analytics/inventory-analytics.component')
+      .then(m => m.InventoryAnalyticsComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: '**',
     redirectTo: ''
   }

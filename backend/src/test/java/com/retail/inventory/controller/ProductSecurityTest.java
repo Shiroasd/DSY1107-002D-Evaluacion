@@ -7,12 +7,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.util.List;
 
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -25,6 +30,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 class ProductSecurityTest {
+
+    @MockBean
+    private JwtDecoder jwtDecoder;
 
     @Autowired
     private MockMvc mockMvc;
@@ -61,9 +69,17 @@ class ProductSecurityTest {
                 .categoryId(1L)
                 .build();
 
+        when(jwtDecoder.decode("normal-user")).thenReturn(Jwt.withTokenValue("normal-user")
+                .header("alg", "RS256").subject("user-seller-123").claim("roles", List.of("User"))
+                .claim("scp", "user_impersonation").build());
+
+        mockMvc.perform(get("/api/v1/products").header("Authorization", "Bearer normal-user"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/admin/rabbitmq/queues/audit-log")
+                        .header("Authorization", "Bearer normal-user"))
+                .andExpect(status().isForbidden());
         mockMvc.perform(post("/api/v1/products")
-                        .with(jwt().jwt(jwt -> jwt.claim("sub", "user-seller-123"))
-                                .authorities(new SimpleGrantedAuthority("ROLE_USER")))
+                        .header("Authorization", "Bearer normal-user")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newProduct)))
                 .andExpect(status().isForbidden())
@@ -82,9 +98,10 @@ class ProductSecurityTest {
                 .categoryId(1L)
                 .build();
 
+        when(jwtDecoder.decode("explicit-admin")).thenReturn(Jwt.withTokenValue("explicit-admin")
+                .header("alg", "RS256").subject("admin-user-001").claim("roles", List.of("Admin")).build());
         mockMvc.perform(post("/api/v1/products")
-                        .with(jwt().jwt(jwt -> jwt.claim("sub", "admin-user-001"))
-                                .authorities(new SimpleGrantedAuthority("ROLE_Admin")))
+                        .header("Authorization", "Bearer explicit-admin")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newProduct)))
                 .andExpect(status().isCreated())

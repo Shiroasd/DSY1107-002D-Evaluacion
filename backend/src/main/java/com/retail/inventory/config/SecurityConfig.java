@@ -8,12 +8,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtClaimValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
@@ -96,6 +98,9 @@ public class SecurityConfig {
                         // Endpoints de administración dinámica de RabbitMQ: requiere rol Admin o scope OT.Admin
                         .requestMatchers("/api/v1/admin/rabbitmq/**")
                         .hasAnyAuthority("ROLE_Admin", "ROLE_ADMIN", "SCOPE_OT.Admin", "OT.Admin")
+                        .requestMatchers("/api/v1/admin/kafka/**")
+                        .access((authentication, context) -> new AuthorizationDecision(
+                                azureJwtGrantedAuthoritiesConverter.hasExplicitAdminRole(authentication.get())))
                         // Cualquier otra solicitud requiere autenticación
                         .anyRequest().authenticated())
 
@@ -143,28 +148,18 @@ public class SecurityConfig {
                     new OAuth2Error("invalid_token", "Emisor (iss) no reconocido: " + token.getIssuer(), null));
         };
 
-        // 3. Validador de Audiencia (Backend App ID, App ID URI, Frontend Client ID)
-        OAuth2TokenValidator<Jwt> audienceValidator = token -> {
-            List<String> audiences = token.getAudience();
-            if (audiences != null && !audiences.isEmpty()) {
-                for (String aud : audiences) {
-                    if (aud.contains(clientId) ||
-                            aud.contains(appIdUri) ||
-                            aud.contains("57c1db2d-484b-463a-b993-45c3ef349e3c") ||
-                            aud.contains("61d2f1d7-99e9-4cf7-83fc-51456a9eb5b6") ||
-                            aud.contains("00000003-0000-0000-c000-000000000000") ||
-                            aud.contains("graph.microsoft.com")) {
-                        return OAuth2TokenValidatorResult.success();
-                    }
-                }
-            }
-            return OAuth2TokenValidatorResult
-                    .failure(new OAuth2Error("invalid_token", "Audiencia (aud) no válida: " + audiences, null));
-        };
+        OAuth2TokenValidator<Jwt> audienceValidator = cloudStockAudience(clientId, appIdUri);
 
         jwtDecoder.setJwtValidator(
                 new DelegatingOAuth2TokenValidator<>(timestampValidator, issuerValidator, audienceValidator));
         return jwtDecoder;
+    }
+
+    static OAuth2TokenValidator<Jwt> cloudStockAudience(String clientId, String appIdUri) {
+        return new JwtClaimValidator<List<String>>("aud", audiences ->
+                audiences != null && !audiences.isEmpty()
+                        && audiences.stream().allMatch(audience ->
+                                clientId.equals(audience) || appIdUri.equals(audience)));
     }
 
     /**

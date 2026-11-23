@@ -2,6 +2,8 @@ package com.retail.inventory.service.impl;
 
 import com.retail.inventory.domain.Category;
 import com.retail.inventory.domain.Product;
+import com.retail.inventory.dto.InventarioMovimientoEvent;
+import com.retail.inventory.dto.InventarioMovimientoEvent.Tipo;
 import com.retail.inventory.dto.ProductRequestDto;
 import com.retail.inventory.dto.ProductResponseDto;
 import com.retail.inventory.dto.StockModificadoEvent;
@@ -13,15 +15,19 @@ import com.retail.inventory.service.InventoryEventPublisher;
 import com.retail.inventory.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +38,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final InventoryEventPublisher eventPublisher;
+    private final ApplicationEventPublisher applicationEvents;
 
     @Override
     @Transactional(readOnly = true)
@@ -93,13 +100,14 @@ public class ProductServiceImpl implements ProductService {
             .build();
 
         Product saved = productRepository.save(product);
+        publicarMovimiento(saved, 0, Tipo.CREACION);
         return mapToResponse(saved);
     }
 
     @Override
     @Transactional
     public ProductResponseDto updateProduct(Long id, ProductRequestDto requestDto) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findForStockUpdate(id)
             .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + id));
 
         String cleanSku = requestDto.getSku().trim().toUpperCase();
@@ -136,7 +144,8 @@ public class ProductServiceImpl implements ProductService {
             evento.setFechaMovimiento(LocalDateTime.now().toString());
             evento.setUsuarioResponsable(resolveCurrentUser());
 
-            eventPublisher.publishStockModificado(evento);
+            publicarMovimiento(updated, stockAnterior, updated.getStock() > stockAnterior ? Tipo.ENTRADA : Tipo.SALIDA);
+            applicationEvents.publishEvent(evento);
         }
 
         return mapToResponse(updated);
@@ -165,6 +174,20 @@ public class ProductServiceImpl implements ProductService {
             }
         }
         return "sistema";
+    }
+
+    @TransactionalEventListener
+    public void publicarStockConfirmado(StockModificadoEvent event) {
+        eventPublisher.publishStockModificado(event);
+    }
+
+    private void publicarMovimiento(Product product, int stockAnterior, Tipo tipo) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String usuario = auth != null && auth.getPrincipal() instanceof Jwt jwt ? jwt.getSubject() : null;
+        int stockNuevo = product.getStock();
+        applicationEvents.publishEvent(new InventarioMovimientoEvent(UUID.randomUUID(), product.getId(),
+            product.getSku(), product.getName(), stockAnterior, stockNuevo, stockNuevo - stockAnterior,
+            tipo, Instant.now(), usuario));
     }
 
     private ProductResponseDto mapToResponse(Product product) {
