@@ -31,3 +31,9 @@ Thumbs.db
 
 backend/package-lock.json
 backend/.mvn/wrapper/apache-maven-*/
+
+# Base de datos H2 local
+backend/data/
+
+# Archivos de errores locales
+backend/error-backend.txt

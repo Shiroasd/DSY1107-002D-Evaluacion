@@ -7,6 +7,7 @@ import org.springframework.amqp.core.AcknowledgeMode;
 import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.Declarables;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
@@ -127,6 +128,25 @@ public class RabbitMQConfig {
     public Binding bindingReposicionDlq() {
         return BindingBuilder.bind(reposicionDlqQueue()).to(deadLetterExchange())
                 .with(props.getRoutingKeys().getDlqReposicion());
+    }
+
+    @Bean
+    public Declarables stockAlertTopology() {
+        var queues = props.getQueues();
+        var keys = props.getRoutingKeys();
+        var exchange = new TopicExchange(props.getExchanges().getInventoryTopic(), true, false);
+        var dlx = new DirectExchange(props.getExchanges().getInventoryDlx(), true, false);
+        var alert = QueueBuilder.durable(queues.getStockAlert())
+                .deadLetterExchange(dlx.getName())
+                .deadLetterRoutingKey(keys.getInventoryDlq())
+                .build();
+        var audit = QueueBuilder.durable(queues.getAuditLog()).build();
+        var deadLetter = QueueBuilder.durable(queues.getDeadLetter()).build();
+
+        return new Declarables(exchange, dlx, alert, audit, deadLetter,
+                BindingBuilder.bind(alert).to(exchange).with(keys.getProductStockLow()),
+                BindingBuilder.bind(audit).to(exchange).with(keys.getProductAll()),
+                BindingBuilder.bind(deadLetter).to(dlx).with(keys.getInventoryDlq()));
     }
 
     // ---------- Converter, template, container factory y admin ----------

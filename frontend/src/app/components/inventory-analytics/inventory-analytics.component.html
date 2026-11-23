@@ -1,0 +1,51 @@
+<section class="inventory-view-container" aria-labelledby="analytics-title">
+  <div class="toolbar-container">
+    <h1 id="analytics-title">Analítica de inventario</h1>
+    <button type="button" class="btn-secondary" (click)="refreshNow()" [disabled]="loading">Actualizar</button>
+  </div>
+
+  <p *ngIf="loading && !summary" class="loading-state" role="status">Cargando métricas…</p>
+  <p *ngIf="error" role="alert">No se pudieron actualizar las métricas. Verifica tu sesión e inténtalo de nuevo.</p>
+
+  <ng-container *ngIf="summary as data">
+    <div *ngIf="data.movimientos > 0; else empty" class="metrics-grid">
+      <div class="kpi-card"><div class="kpi-info">
+        <span class="kpi-label">Movimientos procesados</span>
+        <strong class="kpi-value">{{ data.movimientos | number }}</strong>
+      </div></div>
+      <div class="kpi-card"><div class="kpi-info">
+        <span class="kpi-label">Entradas</span>
+        <strong class="kpi-value">{{ data.entradas | number }}</strong>
+        <span>{{ data.unidadesIngresadas | number }} unidades ingresadas</span>
+      </div></div>
+      <div class="kpi-card"><div class="kpi-info">
+        <span class="kpi-label">Salidas</span>
+        <strong class="kpi-value">{{ data.salidas | number }}</strong>
+        <span>{{ data.unidadesRetiradas | number }} unidades retiradas</span>
+      </div></div>
+      <div class="kpi-card"><div class="kpi-info">
+        <span class="kpi-label">Último movimiento registrado</span>
+        <strong>{{ data.ultimoMovimiento | date:'short' }}</strong>
+      </div></div>
+    </div>
+    <ng-template #empty>
+      <p class="empty-state" *ngIf="!error">Aún no hay movimientos de inventario procesados.</p>
+    </ng-template>
+  </ng-container>
+
+  <section *ngIf="topProducts.length > 0" aria-labelledby="analytics-top">
+    <h2 id="analytics-top">Productos con mayor actividad</h2>
+    <div class="table-card table-responsive">
+      <table class="inventory-table">
+        <thead><tr><th scope="col">Producto</th><th scope="col">SKU</th><th scope="col">Movimientos</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let product of topProducts">
+            <td>{{ product.nombre }}</td>
+            <td>{{ product.sku || '—' }}</td>
+            <td>{{ product.movimientos | number }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>

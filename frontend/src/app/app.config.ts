@@ -2,31 +2,25 @@ import { ApplicationConfig, APP_INITIALIZER, Injectable, inject, LOCALE_ID } fro
 import { provideRouter } from '@angular/router';
 import { registerLocaleData } from '@angular/common';
 import localeEsCl from '@angular/common/locales/es-CL';
-import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi, HttpRequest, HttpHandler, HttpEvent, HttpInterceptor } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi, HttpRequest, HttpHandler, HttpEvent, HttpErrorResponse, HttpInterceptor } from '@angular/common/http';
 
 registerLocaleData(localeEsCl, 'es-CL');
 import {
   IPublicClientApplication,
   PublicClientApplication,
-  InteractionType,
   BrowserCacheLocation,
-  LogLevel,
-  AuthenticationResult
+  LogLevel
 } from '@azure/msal-browser';
 import {
-  MsalInterceptorConfiguration,
-  MsalGuardConfiguration,
   MSAL_INSTANCE,
-  MSAL_GUARD_CONFIG,
-  MSAL_INTERCEPTOR_CONFIG,
   MsalService,
-  MsalGuard,
   MsalBroadcastService
 } from '@azure/msal-angular';
-import { concatMap, tap, catchError, switchMap } from 'rxjs/operators';
-import { of, Observable } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
+import { Observable, throwError } from 'rxjs';
 import { routes } from './app.routes';
 import { environment } from '../environments/environment';
+import { AuthService } from './services/auth.service';
 
 export function loggerCallback(logLevel: LogLevel, message: string) {
   if (logLevel <= LogLevel.Warning) {
@@ -68,92 +62,31 @@ export function MSALInstanceFactory(): IPublicClientApplication {
   });
 }
 
-export function MSALGuardConfigFactory(): MsalGuardConfiguration {
-  return {
-    interactionType: InteractionType.Redirect,
-    authRequest: {
-      scopes: ['openid', 'profile', 'email']
-    },
-    loginFailedRoute: '/'
-  };
-}
-
-import { AuthService } from './services/auth.service';
-
-export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
-  return {
-    interactionType: InteractionType.Popup,
-    protectedResourceMap: environment.apiConfig.protectedResourceMap
-  };
-}
-
-/**
- * Interceptor HTTP para Microsoft Entra ID (MSAL):
- * Inyecta automáticamente el Bearer Token en cada solicitud al Resource Server (Spring Boot).
- * Prioriza el token JWT oficial de la sesión activa autenticada (ID Token validado por Spring Boot).
- * Esto previene de raíz cualquier bucle de recarga (redirect loop), bloqueos por CORB en iframes
- * ocultos de Me.htm?v=3 y peticiones no autorizadas.
- */
 @Injectable()
 export class MsalInterceptor implements HttpInterceptor {
   private authService = inject(AuthService);
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    const isApiRequest = req.url.includes('/api/v1') ||
-                         req.url.startsWith(environment.apiConfig.baseUrl) ||
-                         req.url.includes('32.192.168.114') ||
-                         req.url.includes('32.193.45.223') ||
-                         req.url.includes('localhost:8081') ||
-                         req.url.includes('localhost:8080');
-    if (!isApiRequest) {
+    const api = new URL(environment.apiConfig.baseUrl, window.location.origin);
+    const target = new URL(req.url, window.location.origin);
+    const path = api.pathname.replace(/\/$/, '');
+    if (target.origin !== api.origin ||
+        (target.pathname !== path && !target.pathname.startsWith(path + '/'))) {
       return next.handle(req);
     }
 
-    if (req.headers.has('Authorization')) {
-      return next.handle(req);
-    }
-
-    // 1. Si ya existe un token JWT válido en caché, adjuntarlo directamente
-    const storedToken = this.authService.getStoredToken();
-    if (storedToken) {
-      const cloned = req.clone({
-        setHeaders: {
-          Authorization: `Bearer ${storedToken}`
-        }
-      });
-      return next.handle(cloned);
-    }
-
-    // 2. Si no hay token válido o ha expirado pero hay cuenta activa, renovarlo silenciosamente de forma reactiva
     return this.authService.acquireToken().pipe(
-      switchMap((token) => {
-        if (token) {
-          const cloned = req.clone({
-            setHeaders: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-          return next.handle(cloned);
-        }
-        return next.handle(req);
-      }),
-      catchError(() => {
-        return next.handle(req);
-      })
+      switchMap(token => token
+        ? next.handle(req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }))
+        : throwError(() => new HttpErrorResponse({
+            status: 401, statusText: 'Se requiere una sesión de CloudStock', url: req.url
+          })))
     );
   }
 }
 
-/**
- * Inicializador de MSAL para Angular Standalone:
- * Ejecuta msalService.initialize() durante el arranque de la aplicación (APP_INITIALIZER),
- * garantizando que la instancia de MSAL Browser esté completamente inicializada antes de
- * cualquier llamada a loginRedirect(), loginPopup() o activación de guards de rutas.
- */
-export function MSALInitializerFactory(msalService: MsalService) {
-  return () => {
-    return msalService.initialize();
-  };
+export function MSALInitializerFactory(authService: AuthService) {
+  return () => authService.handleRedirectObservable();
 }
 
 export const appConfig: ApplicationConfig = {
@@ -170,21 +103,12 @@ export const appConfig: ApplicationConfig = {
       useFactory: MSALInstanceFactory
     },
     {
-      provide: MSAL_GUARD_CONFIG,
-      useFactory: MSALGuardConfigFactory
-    },
-    {
-      provide: MSAL_INTERCEPTOR_CONFIG,
-      useFactory: MSALInterceptorConfigFactory
-    },
-    {
       provide: APP_INITIALIZER,
       useFactory: MSALInitializerFactory,
-      deps: [MsalService],
+      deps: [AuthService],
       multi: true
     },
     MsalService,
-    MsalGuard,
     MsalBroadcastService,
     {
       provide: LOCALE_ID,
